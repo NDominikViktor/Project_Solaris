@@ -13,8 +13,9 @@ set(SOURCES
         include/camera.h
         include/scene.h
         src/scene.c
+        include/stb_image.h
 )
 
 add_executable(Solaris ${SOURCES})
 
-target_link_libraries(Solaris mingw32 SDL2main SDL2 opengl32)
+target_link_libraries(Solaris mingw32 SDL2main SDL2 opengl32 glu32)

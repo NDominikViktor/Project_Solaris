@@ -2,9 +2,11 @@
 #include <stdbool.h>
 #include <SDL2/SDL.h>
 #include <GL/gl.h>
+#include <GL/glu.h>
 #include "camera.h"
 #include <math.h>
 #include "scene.h"
+
 
 World world;
 
@@ -69,6 +71,19 @@ int main(int argc, char* args[]) {
     // Fő ciklus
     load_planets(&world, "assets/planets.csv");
     printf("Planet count: %d\n", world.count);
+
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_COLOR_MATERIAL);
+
+    float light_pos[] = {0.0f, 0.0f, 0.0f, 1.0f}; //nap helye
+    float ambient[] = {0.2f, 0.2f, 0.2f, 1.0f}; //alaap szórt fény
+    float diffuse[] = {1.0f, 1.0f, 1.0f, 1.0f}; // erős fehér fény
+
+    glLightfv(GL_LIGHT0, GL_POSITION, light_pos);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
+
     while (running) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) running = false;
@@ -105,24 +120,30 @@ int main(int argc, char* args[]) {
             // 3. Toljuk el a bolygót a helyére
             glTranslatef(x, 0.0f, z);
 
-            // 4. Rajzoljuk ki (egyelőre egy színes négyzetként/kockaként)
-            glBegin(GL_QUADS);
-            // A Nap (0. távolság) legyen sárga, a többi bolygó más színű
-            if (p->distance < 0.1f) glColor3f(1.0f, 1.0f, 0.0f);
-            else glColor3f(0.0f, 0.7f, 1.0f); // Kékes bolygók
+            if (p->distance < 0.1f) {
+                // nap nem kap árnyékot
+                glDisable(GL_LIGHTING);
+            } else {
+                // a bolygóknak van árnyéka
+                glEnable(GL_LIGHTING);
+            }
 
-            float s = p->size;
-            glVertex3f(-s, -s, 0.0f);
-            glVertex3f( s, -s, 0.0f);
-            glVertex3f( s,  s, 0.0f);
-            glVertex3f(-s,  s, 0.0f);
-            glEnd();
+            // 4. Rajzoljuk ki (egyelőre egy színes négyzetként/kockaként)
+            glEnable(GL_TEXTURE_2D);
+            glBindTexture(GL_TEXTURE_2D, p->texture_id);
+
+            GLUquadric* quad = gluNewQuadric();
+            gluQuadricTexture(quad, GL_TRUE); // Ez kényszeríti rá a képet a gömbre!
+            gluSphere(quad, p->size, 32, 32);
+            gluDeleteQuadric(quad);
+
+            glDisable(GL_TEXTURE_2D);
 
             glPopMatrix(); // Visszaállítjuk a mátrixot a következő bolygónak
 
             // 5. Frissítsük az szöget a keringési sebességgel (időalapú mozgás)
             // Itt egy fix értéket adunk hozzá, de később delta_time-al szebb lesz
-            p->current_angle += p->orbit_speed * 0.01f;
+            p->current_angle += p->orbit_speed * 0.0001f;
         }
 
         SDL_GL_SwapWindow(window);

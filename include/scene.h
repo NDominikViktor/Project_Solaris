@@ -4,6 +4,7 @@
 
 #ifndef SCENE_H
 #define SCENE_H
+#include <GL/gl.h>
 
 typedef struct {
     char name[32];
@@ -11,7 +12,7 @@ typedef struct {
     float size;
     float orbit_speed;
     float current_angle;
-    // GLuint texture_id;
+    GLuint texture_id;
 } Planet;
 
 typedef struct {
