@@ -1,4 +1,10 @@
-#nev,tavolsag,meret,keringesi_sebesseg,textura
-Nap,0.0,2.0,0.0,sun.jpg
-Fold,5.0,0.5,1.0,earth.jpg
-Mars,8.0,0.4,0.8,mars.jpg
+#nev,tavolsag,meret,keringes,forgas,doles,kep
+Nap,0.0,2.0,0.0,0.02,0.0,sun.jpg
+Merkur,3.0,0.3,0.15,0.01,0.03,mercury.jpg
+Venusz,4.0,0.7,0.12,0.005,177.3,venus.jpg
+Fold,5.5,0.8,0.1,0.5,23.4,earth.jpg
+Mars,7.5,0.5,0.08,0.45,25.2,mars.jpg
+Jupiter,11.0,1.8,0.04,1.2,3.1,jupiter.jpg
+Szaturnusz,15.0,1.5,0.03,1.1,26.7,saturn.jpg
+Uranusz,19.0,1.1,0.02,0.8,97.77,uranus.jpg
+Neptunusz,23.0,1.0,0.015,0.7,28.3,neptune.jpg

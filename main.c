@@ -32,7 +32,6 @@ void setup_projection() {
 }
 
 int main(int argc, char* args[]) {
-    // Megszüntetjük a "unused parameter" warningokat
     (void)argc;
     (void)args;
 
@@ -41,7 +40,6 @@ int main(int argc, char* args[]) {
         return 1;
     }
 
-    // 2. Ablak létrehozása
     SDL_Window* window = SDL_CreateWindow(
         "Solaris",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -49,17 +47,15 @@ int main(int argc, char* args[]) {
         SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE
     );
 
-    if (window == NULL) { // NULL ellenőrzés javítva
+    if (window == NULL) {
         printf("window error: %s\n", SDL_GetError());
         return 1;
     }
 
-    // 3. OpenGL kontextus
     SDL_GLContext glContext = SDL_GL_CreateContext(window);
 
-    // 4. Alapvető 3D beállítások
-    glEnable(GL_DEPTH_TEST); // Mélységvizsgálat (hogy ne lássunk át a bolygókon)
-    glClearColor(0.0f, 0.0f, 0.05f, 1.0f); // Sötétkék világűr alap
+    glEnable(GL_DEPTH_TEST);
+    glClearColor(0.0f, 0.0f, 0.05f, 1.0f);
 
     bool running = true;
     SDL_Event event;
@@ -68,7 +64,6 @@ int main(int argc, char* args[]) {
     init_camera(&camera);
 
     setup_projection();
-    // Fő ciklus
     load_planets(&world, "assets/planets.csv");
     printf("Planet count: %d\n", world.count);
 
@@ -76,13 +71,13 @@ int main(int argc, char* args[]) {
     glEnable(GL_LIGHT0);
     glEnable(GL_COLOR_MATERIAL);
 
-    float light_pos[] = {0.0f, 0.0f, 0.0f, 1.0f}; //nap helye
-    float ambient[] = {0.2f, 0.2f, 0.2f, 1.0f}; //alaap szórt fény
-    float diffuse[] = {1.0f, 1.0f, 1.0f, 1.0f}; // erős fehér fény
+    float light_pos[] = {0.0f, 0.0f, 0.0f, 1.0f};
+    float ambient[]   = {0.2f, 0.2f, 0.2f, 1.0f};
+    float diffuse[]   = {1.0f, 1.0f, 1.0f, 1.0f};
 
     glLightfv(GL_LIGHT0, GL_POSITION, light_pos);
-    glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
+    glLightfv(GL_LIGHT0, GL_AMBIENT,  ambient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE,  diffuse);
 
     while (running) {
         while (SDL_PollEvent(&event)) {
@@ -92,64 +87,66 @@ int main(int argc, char* args[]) {
         const Uint8* state = SDL_GetKeyboardState(NULL);
         float speed = 0.1f;
 
-        if (state[SDL_SCANCODE_W]) camera.z -= speed;
-        if (state[SDL_SCANCODE_S]) camera.z += speed;
-        if (state[SDL_SCANCODE_A]) camera.x -= speed;
-        if (state[SDL_SCANCODE_D]) camera.x += speed;
-        if (state[SDL_SCANCODE_UP]) camera.pitch += 1.0f;
-        if (state[SDL_SCANCODE_DOWN]) camera.pitch -= 1.0f;
-        if (state[SDL_SCANCODE_LEFT]) camera.yaw -= 1.0f;
+        if (state[SDL_SCANCODE_W])     camera.z -= speed;
+        if (state[SDL_SCANCODE_S])     camera.z += speed;
+        if (state[SDL_SCANCODE_A])     camera.x -= speed;
+        if (state[SDL_SCANCODE_D])     camera.x += speed;
+        if (state[SDL_SCANCODE_UP])    camera.pitch += 1.0f;
+        if (state[SDL_SCANCODE_DOWN])  camera.pitch -= 1.0f;
+        if (state[SDL_SCANCODE_LEFT])  camera.yaw -= 1.0f;
         if (state[SDL_SCANCODE_RIGHT]) camera.yaw += 1.0f;
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Frissítjük a nézetet (Kamera a +10-en van)
         set_view(&camera);
+
         // Végigmegyünk a betöltött bolygókon
         for (int i = 0; i < world.count; i++) {
             Planet* p = &world.planets[i];
 
-            // 1. Számoljuk ki a bolygó aktuális pozícióját a keringés alapján
-            // Az egyszerűség kedvéért körpálya: x = cos(angle)*r, z = sin(angle)*r
+            // 1. Pozíció kiszámítása
             float x = cosf(p->current_angle) * p->distance;
             float z = sinf(p->current_angle) * p->distance;
 
-            // 2. Mentsük el az aktuális mátrix állapotot
-            glPushMatrix();
+            glPushMatrix(); // Mátrix mentése
 
-            // 3. Toljuk el a bolygót a helyére
+            // 2. Mozgatás a pályára
             glTranslatef(x, 0.0f, z);
 
-            if (p->distance < 0.1f) {
-                // nap nem kap árnyékot
-                glDisable(GL_LIGHTING);
-            } else {
-                // a bolygóknak van árnyéka
-                glEnable(GL_LIGHTING);
-            }
+            // 3. Fénykezelés
+            if (p->distance < 0.1f) glDisable(GL_LIGHTING);
+            else glEnable(GL_LIGHTING);
 
-            // 4. Rajzoljuk ki (egyelőre egy színes négyzetként/kockaként)
+            // 4. FORGATÁSOK - Ez a lényeg!
+            // Alap dőlés, hogy a sarkok felül legyenek
+            glRotatef(-90.0f, 1.0f, 0.0f, 0.0f);
+
+            // ÚJ: Egyedi tengelyferdeség beállítása (CSV-ből jön)
+            glRotatef(p->axial_tilt, 0.0f, 1.0f, 0.0f);
+
+            // Saját tengely körüli pörgés
+            glRotatef(p->rotation_angle, 0.0f, 0.0f, 1.0f);
+
+            // 5. Rajzolás
             glEnable(GL_TEXTURE_2D);
             glBindTexture(GL_TEXTURE_2D, p->texture_id);
 
             GLUquadric* quad = gluNewQuadric();
-            gluQuadricTexture(quad, GL_TRUE); // Ez kényszeríti rá a képet a gömbre!
+            gluQuadricTexture(quad, GL_TRUE);
             gluSphere(quad, p->size, 32, 32);
             gluDeleteQuadric(quad);
 
             glDisable(GL_TEXTURE_2D);
+            glPopMatrix(); // Mátrix visszaállítása
 
-            glPopMatrix(); // Visszaállítjuk a mátrixot a következő bolygónak
-
-            // 5. Frissítsük az szöget a keringési sebességgel (időalapú mozgás)
-            // Itt egy fix értéket adunk hozzá, de később delta_time-al szebb lesz
-            p->current_angle += p->orbit_speed * 0.0001f;
+            // 6. Szögek frissítése
+            p->current_angle += p->orbit_speed * 0.001f;
+            p->rotation_angle += p->rotation_speed;
         }
 
         SDL_GL_SwapWindow(window);
     }
 
-    // Takarítás
     SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(window);
     SDL_Quit();

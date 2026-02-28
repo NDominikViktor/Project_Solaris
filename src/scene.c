@@ -46,8 +46,8 @@ void load_planets(World* world, const char* filename) {
         Planet* p = &world->planets[world->count];
 
         // Frissített sscanf: az utolsó %s beolvassa a textúra nevét (pl. sun.jpg)
-        if (sscanf(line, "%[^,],%f,%f,%f,%s",
-                   p->name, &p->distance, &p->size, &p->orbit_speed, texture_name) == 5) {
+        if (sscanf(line, "%[^,],%f,%f,%f,%f,%f,%s",
+                   p->name, &p->distance, &p->size, &p->orbit_speed, &p->rotation_speed, &p->axial_tilt, texture_name) == 7) {
 
             p->current_angle = 0.0f;
 
