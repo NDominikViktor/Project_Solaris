@@ -1,0 +1,3 @@
+C:/Users/novak/Desktop/Fejlesztes/Solaris/cmake-build-debug/CMakeFiles/Solaris.dir
+C:/Users/novak/Desktop/Fejlesztes/Solaris/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/novak/Desktop/Fejlesztes/Solaris/cmake-build-debug/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,20 @@
+[
+{
+  "directory": "C:/Users/novak/Desktop/Fejlesztes/Solaris/cmake-build-debug",
+  "command": "C:\\Users\\novak\\Desktop\\Fejlesztes\\c_sdk_220203\\MinGW\\bin\\gcc.exe -IC:/Users/novak/Desktop/Fejlesztes/Solaris/include -g -std=gnu11 -fdiagnostics-color=always -o CMakeFiles\\Solaris.dir\\main.c.obj -c C:\\Users\\novak\\Desktop\\Fejlesztes\\Solaris\\main.c",
+  "file": "C:/Users/novak/Desktop/Fejlesztes/Solaris/main.c",
+  "output": "C:/Users/novak/Desktop/Fejlesztes/Solaris/cmake-build-debug/CMakeFiles/Solaris.dir/main.c.obj"
+},
+{
+  "directory": "C:/Users/novak/Desktop/Fejlesztes/Solaris/cmake-build-debug",
+  "command": "C:\\Users\\novak\\Desktop\\Fejlesztes\\c_sdk_220203\\MinGW\\bin\\gcc.exe -IC:/Users/novak/Desktop/Fejlesztes/Solaris/include -g -std=gnu11 -fdiagnostics-color=always -o CMakeFiles\\Solaris.dir\\src\\camera.c.obj -c C:\\Users\\novak\\Desktop\\Fejlesztes\\Solaris\\src\\camera.c",
+  "file": "C:/Users/novak/Desktop/Fejlesztes/Solaris/src/camera.c",
+  "output": "C:/Users/novak/Desktop/Fejlesztes/Solaris/cmake-build-debug/CMakeFiles/Solaris.dir/src/camera.c.obj"
+},
+{
+  "directory": "C:/Users/novak/Desktop/Fejlesztes/Solaris/cmake-build-debug",
+  "command": "C:\\Users\\novak\\Desktop\\Fejlesztes\\c_sdk_220203\\MinGW\\bin\\gcc.exe -IC:/Users/novak/Desktop/Fejlesztes/Solaris/include -g -std=gnu11 -fdiagnostics-color=always -o CMakeFiles\\Solaris.dir\\src\\scene.c.obj -c C:\\Users\\novak\\Desktop\\Fejlesztes\\Solaris\\src\\scene.c",
+  "file": "C:/Users/novak/Desktop/Fejlesztes/Solaris/src/scene.c",
+  "output": "C:/Users/novak/Desktop/Fejlesztes/Solaris/cmake-build-debug/CMakeFiles/Solaris.dir/src/scene.c.obj"
+}
+]
