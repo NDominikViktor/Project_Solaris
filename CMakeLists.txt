@@ -18,4 +18,4 @@ set(SOURCES
 
 add_executable(Solaris ${SOURCES})
 
-target_link_libraries(Solaris mingw32 SDL2main SDL2 opengl32 glu32)
+target_link_libraries(Solaris mingw32 SDL2main SDL2 opengl32 glu32 SDL2_image)

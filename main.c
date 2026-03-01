@@ -16,6 +16,11 @@ const int SCREEN_HEIGHT = 720;
 
 float sun_intensity = 1.0f;
 
+bool show_help = false;
+GLuint help_texture_id;
+
+GLuint load_texture(const char* filename);
+
 void setup_projection() {
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -68,6 +73,7 @@ int main(int argc, char* args[]) {
     setup_projection();
     load_planets(&world, "assets/planets.csv");
     printf("Planet count: %d\n", world.count);
+    help_texture_id = load_texture("assets/help.png");
 
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
@@ -90,23 +96,56 @@ int main(int argc, char* args[]) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) running = false;
 
+            if (event.type == SDL_KEYDOWN) {
+                if (event.key.keysym.sym == SDLK_F1 || event.key.keysym.sym == SDLK_h) {
+                    show_help = !show_help;
+                    printf("Sugo allapota: %s\n", show_help ? "BE" : "KI");
+                }
+            }
+
+            if (event.key.keysym.sym == SDLK_ESCAPE) {
+                running = false;
+            }
+
             if (event.type == SDL_MOUSEMOTION) {
                 float sensitivity = 0.1f;
-                camera.yaw += event.motion.xrel * sensitivity;
+                camera.yaw -= event.motion.xrel * sensitivity;
+                camera.pitch -= event.motion.yrel * sensitivity;
+
+                // korlátozzuk a függőleges nézést ne forduljon át a kamera fejjel lefele.
+                if (camera.pitch > 89.0f) camera.pitch = 89.0f;
+                if (camera.pitch < -89.0f) camera.pitch = -89.0f;
             }
         }
 
         const Uint8* state = SDL_GetKeyboardState(NULL);
         float speed = 0.1f;
+        float rad_yaw = camera.yaw * M_PI / 180.0f;
 
-        if (state[SDL_SCANCODE_W])     camera.z -= speed;
-        if (state[SDL_SCANCODE_S])     camera.z += speed;
-        if (state[SDL_SCANCODE_A])     camera.x -= speed;
-        if (state[SDL_SCANCODE_D])     camera.x += speed;
+        if (state[SDL_SCANCODE_W]) {
+            camera.x -= sinf(rad_yaw) * speed;
+            camera.z -= cosf(rad_yaw) * speed;
+        }
+        if (state[SDL_SCANCODE_S]) {
+            camera.x += sinf(rad_yaw) * speed;
+            camera.z += cosf(rad_yaw) * speed;
+        }
+        if (state[SDL_SCANCODE_A]) {
+            camera.x -= cosf(rad_yaw) * speed;
+            camera.z += sinf(rad_yaw) * speed;
+        }
+        if (state[SDL_SCANCODE_D]) {
+            camera.x += cosf(rad_yaw) * speed;
+            camera.z -= sinf(rad_yaw) * speed;
+        }
         if (state[SDL_SCANCODE_UP])    camera.pitch += 1.0f;
         if (state[SDL_SCANCODE_DOWN])  camera.pitch -= 1.0f;
-        if (state[SDL_SCANCODE_LEFT])  camera.yaw -= 1.0f;
-        if (state[SDL_SCANCODE_RIGHT]) camera.yaw += 1.0f;
+        if (state[SDL_SCANCODE_LEFT])  camera.yaw += 1.0f;
+        if (state[SDL_SCANCODE_RIGHT]) camera.yaw -= 1.0f;
+
+        if (state[SDL_SCANCODE_ESCAPE]) {
+            running = false;
+        }
 
         // 1. FÉNYERŐ GOMBOK KEZELÉSE
     if (state[SDL_SCANCODE_KP_PLUS] || state[SDL_SCANCODE_EQUALS]) {
@@ -204,6 +243,46 @@ int main(int argc, char* args[]) {
         p->current_angle  += p->orbit_speed * 0.001f;
         p->rotation_angle += p->rotation_speed;
     }
+        if (show_help) {
+            glMatrixMode(GL_PROJECTION);
+            glPushMatrix();
+            glLoadIdentity();
+            // A 0,0 a bal felső sarok, SCREEN_WIDTH/HEIGHT a jobb alsó
+            glOrtho(0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, -1, 1);
+
+            glMatrixMode(GL_MODELVIEW);
+            glPushMatrix();
+            glLoadIdentity();
+
+            glDisable(GL_LIGHTING);
+            glDisable(GL_DEPTH_TEST);
+            glDisable(GL_CULL_FACE);
+
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glEnable(GL_TEXTURE_2D);
+            glBindTexture(GL_TEXTURE_2D, help_texture_id);
+
+            glColor3f(1.0f, 1.0f, 1.0f); // Fehér szín, hogy a textúra eredeti színei látsszanak
+
+            glBegin(GL_QUADS);
+            glTexCoord2f(0, 0); glVertex2f(100, 100);
+            glTexCoord2f(1, 0); glVertex2f(SCREEN_WIDTH - 100, 100);
+            glTexCoord2f(1, 1); glVertex2f(SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
+            glTexCoord2f(0, 1); glVertex2f(100, SCREEN_HEIGHT - 100);
+            glEnd();
+
+            glDisable(GL_BLEND);
+            glDisable(GL_TEXTURE_2D);
+            glEnable(GL_DEPTH_TEST);
+            glEnable(GL_CULL_FACE);
+
+            glPopMatrix();
+            glMatrixMode(GL_PROJECTION);
+            glPopMatrix();
+            glMatrixMode(GL_MODELVIEW);
+        }
+
     SDL_GL_SwapWindow(window);
 }
 

@@ -84,7 +84,7 @@ build CMakeFiles/Solaris.dir/src/scene.c.obj: C_COMPILER__Solaris_unscanned_Debu
 build Solaris.exe: C_EXECUTABLE_LINKER__Solaris_Debug CMakeFiles/Solaris.dir/main.c.obj CMakeFiles/Solaris.dir/src/camera.c.obj CMakeFiles/Solaris.dir/src/scene.c.obj
   CONFIG = Debug
   FLAGS = -g
-  LINK_LIBRARIES = -lmingw32  -lSDL2main  -lSDL2  -lopengl32  -lglu32  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
+  LINK_LIBRARIES = -lmingw32  -lSDL2main  -lSDL2  -lopengl32  -lglu32  -lSDL2_image  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
   OBJECT_DIR = CMakeFiles\Solaris.dir
   POST_BUILD = cd .
   PRE_LINK = cd .
