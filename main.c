@@ -22,6 +22,7 @@ GLuint skybox_texture_id;
 
 GLuint load_texture(const char* filename);
 void draw_skybox(GLuint texure_id);
+void draw_atmosphere(float size, float r, float g, float b, float alpha);
 
 void setup_projection() {
     glMatrixMode(GL_PROJECTION);
@@ -67,6 +68,7 @@ int main(int argc, char* args[]) {
     glClearColor(0.0f, 0.0f, 0.05f, 1.0f);
 
     bool running = true;
+    bool fog_enabled = true;
     SDL_Event event;
 
     Camera camera;
@@ -80,6 +82,14 @@ int main(int argc, char* args[]) {
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
     glEnable(GL_COLOR_MATERIAL);
+
+    glEnable(GL_FOG);
+    float fogColor[] = {0.05f, 0.02f, 0.15f, 1.0f}; // sötét lila/kék köd
+
+    glFogfv(GL_FOG_COLOR, fogColor);
+    glFogf(GL_FOG_DENSITY, 0.02f);
+    glHint(GL_FOG_HINT, GL_NICEST);
+    glFogi(GL_FOG_MODE, GL_EXP2);
 
     float r = 1.0f;
     float g = sun_intensity > 1.0f ? 1.0f : sun_intensity;
@@ -99,14 +109,20 @@ int main(int argc, char* args[]) {
             if (event.type == SDL_QUIT) running = false;
 
             if (event.type == SDL_KEYDOWN) {
-                if (event.key.keysym.sym == SDLK_F1 || event.key.keysym.sym == SDLK_h) {
-                    show_help = !show_help;
-                    printf("Sugo allapota: %s\n", show_help ? "BE" : "KI");
+                // F gomb kezelése sym-mel a scancode helyett
+                if (event.key.keysym.sym == SDLK_f) {
+                    fog_enabled = !fog_enabled;
+                    if (fog_enabled) {
+                        glEnable(GL_FOG);
+                        printf("Kod: BE\n");
+                    } else {
+                        glDisable(GL_FOG);
+                        printf("Kod: KI\n");
+                    }
                 }
-            }
-
-            if (event.key.keysym.sym == SDLK_ESCAPE) {
-                running = false;
+                if (event.key.keysym.sym == SDLK_ESCAPE) {
+                    running = false;
+                }
             }
 
             if (event.type == SDL_MOUSEMOTION) {
@@ -194,27 +210,31 @@ int main(int argc, char* args[]) {
         gluQuadricTexture(quad, GL_TRUE);
 
         if (p->distance < 0.1f) {
-            glDisable(GL_LIGHTING);
+            glDisable(GL_LIGHTING); // A Nap saját fénye miatt ne kapjon árnyékot
             glEnable(GL_TEXTURE_2D);
             glBindTexture(GL_TEXTURE_2D, p->texture_id);
 
-            // Itt szinezzük át a Napot a sun_intensity alapján
-            glColor3f(r, g, b);
-
+            // Itt számoljuk ki a dinamikus méretet
             float current_sun_size = p->size;
-            // Ha kicsi az intenzitás, a Nap "felfúvódik" (Vörös Óriás)
-            if (sun_intensity < 0.8f) current_sun_size *= (1.0f + (0.8f - sun_intensity) * 2.0f);
-            // ha nagy az intenzitás, a nap "összehuzódik" (Fehér törpe)
-            else if (sun_intensity > 1.5f) {
-                current_sun_size *= (1.0f - (sun_intensity - 1.5f) * 1.5f);
-                // csakhogy ne tünjön el.
+            if (sun_intensity < 0.8f) {
+                current_sun_size *= (1.0f + (0.8f - sun_intensity) * 2.0f); // Felfúvódik
+            } else if (sun_intensity > 1.5f) {
+                current_sun_size *= (1.0f - (sun_intensity - 1.5f) * 1.5f); // Összehúzódik
                 if (current_sun_size < 0.2f) current_sun_size = 0.2f;
             }
 
-            gluSphere(quad, current_sun_size, 32, 32);
+            // Színbeállítás az intenzitás alapján
+            glColor3f(r, g, b);
 
-            glColor3f(1.0f, 1.0f, 1.0f); // Visszaállítjuk a színt
+            // CSAK EGYETLEN gömböt rajzolunk a kiszámolt mérettel!
+            GLUquadric* sunQuad = gluNewQuadric();
+            gluQuadricTexture(sunQuad, GL_TRUE);
+            gluSphere(sunQuad, current_sun_size, 32, 32);
+            gluDeleteQuadric(sunQuad);
+
+            glColor3f(1.0f, 1.0f, 1.0f); // Szín visszaállítása
             glDisable(GL_TEXTURE_2D);
+            glEnable(GL_LIGHTING);
         } else {
             glEnable(GL_LIGHTING);
 
@@ -228,6 +248,9 @@ int main(int argc, char* args[]) {
             glBindTexture(GL_TEXTURE_2D, p->texture_id);
             gluSphere(quad, p->size, 32, 32);
 
+           if (p->has_atmosphere) {
+               draw_atmosphere(p->size, p->atmo_r, p->atmo_g, p->atmo_b, 0.25f);
+           }
             // Szaturnusz és Uránusz gyűrű (közös logika)
             if (strcmp(p->name, "Szaturnusz") == 0 || strcmp(p->name, "Uranusz") == 0) {
                 glDisable(GL_CULL_FACE);

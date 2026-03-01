@@ -16,6 +16,8 @@ typedef struct {
     float rotation_angle; // saját maga körrüli forgás
     float axial_tilt;  // Tengelyferdeség foka
     GLuint texture_id;
+    int has_atmosphere;
+    float atmo_r, atmo_g, atmo_b;
 } Planet;
 
 typedef struct {

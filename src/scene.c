@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 #define STB_IMAGE_IMPLEMENTATION
+#include <GL/glu.h>
+
 #include "stb_image.h"
 
 GLuint load_texture(const char* filename) {
@@ -46,8 +48,8 @@ void load_planets(World* world, const char* filename) {
         Planet* p = &world->planets[world->count];
 
         // Frissített sscanf: az utolsó %s beolvassa a textúra nevét (pl. sun.jpg)
-        if (sscanf(line, "%[^,],%f,%f,%f,%f,%f,%s",
-                   p->name, &p->distance, &p->size, &p->orbit_speed, &p->rotation_speed, &p->axial_tilt, texture_name) == 7) {
+        if (sscanf(line, "%[^,],%f,%f,%f,%f,%f,%[^,], %d, %f, %f, %f, %f",
+                   p->name, &p->distance, &p->size, &p->orbit_speed, &p->rotation_speed, &p->axial_tilt, texture_name, &p->has_atmosphere, &p->atmo_r, &p->atmo_g, &p->atmo_b) == 11) {
 
             p->current_angle = 0.0f;
 
@@ -67,7 +69,8 @@ void load_planets(World* world, const char* filename) {
 
 void draw_skybox (GLuint texture_id) {
     float size = 500.0f; // legyen messze
-
+    GLboolean fog_was_enabled = glIsEnabled(GL_FOG);
+    glDisable(GL_FOG);
     glDisable(GL_LIGHTING);
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, texture_id);
@@ -110,4 +113,23 @@ void draw_skybox (GLuint texture_id) {
     glEnd();
 
     glEnable(GL_LIGHTING);
+    if (fog_was_enabled) glEnable(GL_FOG);
+
+}
+
+void draw_atmosphere(float size, float r, float g, float b, float alpha) {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_LIGHTING); // emiatt fénylik a légkör.
+
+    glColor4f(r, g, b, alpha); // emiatt átlátszó
+
+    GLUquadric* quad = gluNewQuadric();
+
+    gluSphere(quad, size * 1.05f, 32, 32);
+    gluDeleteQuadric(quad);
+
+    glEnable(GL_LIGHTING);
+    glDisable(GL_BLEND);
+    glColor3f(1.0f, 1.0f, 1.0f); //Szín visszaállítása.
 }
