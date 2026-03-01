@@ -18,8 +18,10 @@ float sun_intensity = 1.0f;
 
 bool show_help = false;
 GLuint help_texture_id;
+GLuint skybox_texture_id;
 
 GLuint load_texture(const char* filename);
+void draw_skybox(GLuint texure_id);
 
 void setup_projection() {
     glMatrixMode(GL_PROJECTION);
@@ -74,7 +76,7 @@ int main(int argc, char* args[]) {
     load_planets(&world, "assets/planets.csv");
     printf("Planet count: %d\n", world.count);
     help_texture_id = load_texture("assets/help.png");
-
+    skybox_texture_id = load_texture("assets/stars.jpg");
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
     glEnable(GL_COLOR_MATERIAL);
@@ -164,6 +166,11 @@ int main(int argc, char* args[]) {
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     set_view(&camera);
+    glPushMatrix();
+        glTranslatef(camera.x, camera.y, camera.z),
+        draw_skybox(skybox_texture_id);
+        glPopMatrix();
+
 
     // 3. FÉNY FRISSÍTÉSE
     float ambient[] = {0.05f, 0.05f, 0.05f, 1.0f};

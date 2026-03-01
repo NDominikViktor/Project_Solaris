@@ -64,3 +64,50 @@ void load_planets(World* world, const char* filename) {
     fclose(file);
     printf("Loaded %d planets from %s\n", world->count, filename);
 }
+
+void draw_skybox (GLuint texture_id) {
+    float size = 500.0f; // legyen messze
+
+    glDisable(GL_LIGHTING);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, texture_id);
+    glColor3f(1.0f, 1.0f, 1.0f);
+
+    glBegin(GL_QUADS);
+    glTexCoord2f(0, 0); glVertex3f(-size, -size, -size);
+    glTexCoord2f(1, 0); glVertex3f(size, -size, -size);
+    glTexCoord2f(1, 1); glVertex3f(size, size, -size);
+    glTexCoord2f(0, 1); glVertex3f(-size, size, -size);
+
+    glTexCoord2f(0, 0); glVertex3f( size, -size,  size);
+    glTexCoord2f(1, 0); glVertex3f(-size, -size,  size);
+    glTexCoord2f(1, 1); glVertex3f(-size,  size,  size);
+    glTexCoord2f(0, 1); glVertex3f( size,  size,  size);
+
+    // Bal oldali fal
+    glTexCoord2f(0, 0); glVertex3f(-size, -size,  size);
+    glTexCoord2f(1, 0); glVertex3f(-size, -size, -size);
+    glTexCoord2f(1, 1); glVertex3f(-size,  size, -size);
+    glTexCoord2f(0, 1); glVertex3f(-size,  size,  size);
+
+    // Jobb oldali fal
+    glTexCoord2f(0, 0); glVertex3f( size, -size, -size);
+    glTexCoord2f(1, 0); glVertex3f( size, -size,  size);
+    glTexCoord2f(1, 1); glVertex3f( size,  size,  size);
+    glTexCoord2f(0, 1); glVertex3f( size,  size, -size);
+
+    // Felső fal
+    glTexCoord2f(0, 0); glVertex3f(-size,  size, -size);
+    glTexCoord2f(1, 0); glVertex3f( size,  size, -size);
+    glTexCoord2f(1, 1); glVertex3f( size,  size,  size);
+    glTexCoord2f(0, 1); glVertex3f(-size,  size,  size);
+
+    // Alsó fal
+    glTexCoord2f(0, 0); glVertex3f(-size, -size,  size);
+    glTexCoord2f(1, 0); glVertex3f( size, -size,  size);
+    glTexCoord2f(1, 1); glVertex3f( size, -size, -size);
+    glTexCoord2f(0, 1); glVertex3f(-size, -size, -size);
+    glEnd();
+
+    glEnable(GL_LIGHTING);
+}
