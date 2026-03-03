@@ -283,8 +283,10 @@ int main(int argc, char* args[]) {
                 float outer = (strcmp(p->name, "Uranusz") == 0) ? 1.7f : 2.1f;
                 gluDisk(ringQuad, p->size * inner, p->size * outer, 64, 1);
                 gluDeleteQuadric(ringQuad);
-                glDisable(GL_CULL_FACE);
                 glEnable(GL_CULL_FACE);
+
+                glDisable(GL_BLEND);
+                glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
             }
             glDisable(GL_TEXTURE_2D);
             glPopMatrix();
