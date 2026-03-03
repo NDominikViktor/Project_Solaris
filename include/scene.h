@@ -20,7 +20,7 @@ typedef struct {
     float atmo_r, atmo_g, atmo_b;
 } Planet;
 
-typedef struct {
+typedef struct World{
     Planet planets[10];
     int count;
 } World;

@@ -74,6 +74,7 @@ int main(int argc, char* args[]) {
     Camera camera;
     init_camera(&camera);
 
+
     setup_projection();
     load_planets(&world, "assets/planets.csv");
     printf("Planet count: %d\n", world.count);
@@ -104,6 +105,10 @@ int main(int argc, char* args[]) {
     glLightfv(GL_LIGHT0, GL_DIFFUSE,  diffuse);
     glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
 
+    int target_planet_index = -1; // -1: szabad mozgás, 0-8: bolygó követése
+
+
+
     while (running) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) running = false;
@@ -123,6 +128,12 @@ int main(int argc, char* args[]) {
                 if (event.key.keysym.sym == SDLK_ESCAPE) {
                     running = false;
                 }
+
+                if (event.key.keysym.sym >= SDLK_1 && event.key.keysym.sym <= SDLK_9) {
+                    target_planet_index = event.key.keysym.sym - SDLK_1;
+                    if (target_planet_index >= world.count) target_planet_index = -1;
+                }
+                if (event.key.keysym.sym == SDLK_0) target_planet_index = -1; // Szabad kamera visszaállítása
             }
 
             if (event.type == SDL_MOUSEMOTION) {
@@ -141,20 +152,16 @@ int main(int argc, char* args[]) {
         float rad_yaw = camera.yaw * M_PI / 180.0f;
 
         if (state[SDL_SCANCODE_W]) {
-            camera.x -= sinf(rad_yaw) * speed;
-            camera.z -= cosf(rad_yaw) * speed;
+            update_camera_position(&camera, -sinf(rad_yaw) * speed, 0, -cosf(rad_yaw) * speed, &world);
         }
         if (state[SDL_SCANCODE_S]) {
-            camera.x += sinf(rad_yaw) * speed;
-            camera.z += cosf(rad_yaw) * speed;
+            update_camera_position(&camera, sinf(rad_yaw) * speed, 0, cosf(rad_yaw) * speed, &world);
         }
         if (state[SDL_SCANCODE_A]) {
-            camera.x -= cosf(rad_yaw) * speed;
-            camera.z += sinf(rad_yaw) * speed;
+            update_camera_position(&camera, -cosf(rad_yaw) * speed, 0, sinf(rad_yaw) * speed, &world);
         }
         if (state[SDL_SCANCODE_D]) {
-            camera.x += cosf(rad_yaw) * speed;
-            camera.z -= sinf(rad_yaw) * speed;
+            update_camera_position(&camera, cosf(rad_yaw) * speed, 0, -sinf(rad_yaw) * speed, &world);
         }
         if (state[SDL_SCANCODE_UP])    camera.pitch += 1.0f;
         if (state[SDL_SCANCODE_DOWN])  camera.pitch -= 1.0f;
@@ -196,11 +203,21 @@ int main(int argc, char* args[]) {
 
     float light_pos[] = {0.0f, 0.0f, 0.0f, 1.0f};
     glLightfv(GL_LIGHT0, GL_POSITION, light_pos);
+        if (target_planet_index != -1) {
+            Planet* p = &world.planets[target_planet_index];
+            float px = cosf(p->current_angle) * p->distance;
+            float pz = sinf(p->current_angle) * p->distance;
+            camera.x = px + p->size * 3.0f;
+            camera.y = p->size * 2.0f;
+            camera.z = pz + p->size * 3.0f;
+        }
 
     for (int i = 0; i < world.count; i++) {
         Planet* p = &world.planets[i];
         float x = cosf(p->current_angle) * p->distance;
         float z = sinf(p->current_angle) * p->distance;
+
+
 
         glPushMatrix();
         glTranslatef(x, 0.0f, z);
@@ -253,7 +270,12 @@ int main(int argc, char* args[]) {
            }
             // Szaturnusz és Uránusz gyűrű (közös logika)
             if (strcmp(p->name, "Szaturnusz") == 0 || strcmp(p->name, "Uranusz") == 0) {
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
                 glDisable(GL_CULL_FACE);
+
+                glColor4f(1.0f, 1.0f, 1.0f, 0.6f);
+
                 GLUquadric* ringQuad = gluNewQuadric();
                 gluQuadricTexture(ringQuad, GL_TRUE);
                 // Az Uránusznak vékonyabb gyűrűt adunk
@@ -261,6 +283,7 @@ int main(int argc, char* args[]) {
                 float outer = (strcmp(p->name, "Uranusz") == 0) ? 1.7f : 2.1f;
                 gluDisk(ringQuad, p->size * inner, p->size * outer, 64, 1);
                 gluDeleteQuadric(ringQuad);
+                glDisable(GL_CULL_FACE);
                 glEnable(GL_CULL_FACE);
             }
             glDisable(GL_TEXTURE_2D);

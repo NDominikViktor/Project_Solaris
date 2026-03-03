@@ -1,9 +1,11 @@
 //
 // Created by novakdominikviktor on 2026. 02. 28..
 //
+#include "scene.h"
 #include "camera.h"
 #include <math.h>
 #include <GL/gl.h>
+#include <math.h>
 
 void init_camera(Camera* camera) {
     camera->x = 0.0f;
@@ -21,5 +23,28 @@ void set_view(Camera* camera) {
     glRotatef(-camera->yaw, 0.0f, 1.0f, 0.0f);
 
     glTranslatef(-camera->x, -camera->y, -camera->z);
+}
 
+void update_camera_position(Camera* camera, float dx, float dy, float dz, struct World* world) {
+    float newX = camera->x + dx;
+    float newY = camera->y + dy;
+    float newZ = camera->z + dz;
+
+    // Mivel fent include-oltuk a scene.h-t, itt a world->count már NEM lesz incomplete!
+    for (int i = 0; i < world->count; i++) {
+        Planet* p = &world->planets[i];
+
+        float px = cosf(p->current_angle) * p->distance;
+        float pz = sinf(p->current_angle) * p->distance;
+
+        float dist = sqrtf((newX - px) * (newX - px) + (newY - 0.0f) * (newY - 0.0f) + (newZ - pz) * (newZ - pz));
+
+        if (dist < (p->size + 0.5f)) {
+            return; // Ütközés: nem frissítjük a pozíciót, kilépünk
+        }
+    }
+
+    camera->x = newX;
+    camera->y = newY;
+    camera->z = newZ;
 }
