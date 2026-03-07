@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <GL/glu.h>
 
@@ -15,7 +16,6 @@ GLuint load_texture(const char* filename) {
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
 
-    // Textúra paraméterek (ismétlődés és simítás)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -44,31 +44,31 @@ void load_planets(World* world, const char* filename) {
     while (fgets(line, sizeof(line), file) && world->count < 10) {
         if (line[0] == '#') continue;
 
-        char texture_name[64]; // Ideiglenes tároló a fájlnévnek
+        char texture_name[64];
         Planet* p = &world->planets[world->count];
 
-        // Frissített sscanf: az utolsó %s beolvassa a textúra nevét (pl. sun.jpg)
         if (sscanf(line, "%[^,],%f,%f,%f,%f,%f,%[^,], %d, %f, %f, %f, %f",
-                   p->name, &p->distance, &p->size, &p->orbit_speed, &p->rotation_speed, &p->axial_tilt, texture_name, &p->has_atmosphere, &p->atmo_r, &p->atmo_g, &p->atmo_b) == 11) {
+                   p->name, &p->distance, &p->size, &p->orbit_speed, &p->rotation_speed,
+                   &p->axial_tilt, texture_name, &p->has_atmosphere,
+                   &p->atmo_r, &p->atmo_g, &p->atmo_b) == 11) {
 
-            p->current_angle = 0.0f;
+            p->current_angle  = 0.0f;
+            p->ring_particles = NULL;   // safe default
+            p->particle_count = 0;
 
-            // Itt jön a lényeg: Összeillesztjük az assets/ mappát a fájlnévvel
             char full_path[128];
             sprintf(full_path, "assets/%s", texture_name);
-
-            // Betöltjük a textúrát és elmentjük az ID-t a bolygóba
             p->texture_id = load_texture(full_path);
 
             world->count++;
-                   }
+        }
     }
     fclose(file);
     printf("Loaded %d planets from %s\n", world->count, filename);
 }
 
-void draw_skybox (GLuint texture_id) {
-    float size = 500.0f; // legyen messze
+void draw_skybox(GLuint texture_id) {
+    float size = 500.0f;
     GLboolean fog_was_enabled = glIsEnabled(GL_FOG);
     glDisable(GL_FOG);
     glDisable(GL_LIGHTING);
@@ -78,34 +78,30 @@ void draw_skybox (GLuint texture_id) {
 
     glBegin(GL_QUADS);
     glTexCoord2f(0, 0); glVertex3f(-size, -size, -size);
-    glTexCoord2f(1, 0); glVertex3f(size, -size, -size);
-    glTexCoord2f(1, 1); glVertex3f(size, size, -size);
-    glTexCoord2f(0, 1); glVertex3f(-size, size, -size);
+    glTexCoord2f(1, 0); glVertex3f( size, -size, -size);
+    glTexCoord2f(1, 1); glVertex3f( size,  size, -size);
+    glTexCoord2f(0, 1); glVertex3f(-size,  size, -size);
 
     glTexCoord2f(0, 0); glVertex3f( size, -size,  size);
     glTexCoord2f(1, 0); glVertex3f(-size, -size,  size);
     glTexCoord2f(1, 1); glVertex3f(-size,  size,  size);
     glTexCoord2f(0, 1); glVertex3f( size,  size,  size);
 
-    // Bal oldali fal
     glTexCoord2f(0, 0); glVertex3f(-size, -size,  size);
     glTexCoord2f(1, 0); glVertex3f(-size, -size, -size);
     glTexCoord2f(1, 1); glVertex3f(-size,  size, -size);
     glTexCoord2f(0, 1); glVertex3f(-size,  size,  size);
 
-    // Jobb oldali fal
     glTexCoord2f(0, 0); glVertex3f( size, -size, -size);
     glTexCoord2f(1, 0); glVertex3f( size, -size,  size);
     glTexCoord2f(1, 1); glVertex3f( size,  size,  size);
     glTexCoord2f(0, 1); glVertex3f( size,  size, -size);
 
-    // Felső fal
     glTexCoord2f(0, 0); glVertex3f(-size,  size, -size);
     glTexCoord2f(1, 0); glVertex3f( size,  size, -size);
     glTexCoord2f(1, 1); glVertex3f( size,  size,  size);
     glTexCoord2f(0, 1); glVertex3f(-size,  size,  size);
 
-    // Alsó fal
     glTexCoord2f(0, 0); glVertex3f(-size, -size,  size);
     glTexCoord2f(1, 0); glVertex3f( size, -size,  size);
     glTexCoord2f(1, 1); glVertex3f( size, -size, -size);
@@ -114,22 +110,84 @@ void draw_skybox (GLuint texture_id) {
 
     glEnable(GL_LIGHTING);
     if (fog_was_enabled) glEnable(GL_FOG);
-
 }
 
 void draw_atmosphere(float size, float r, float g, float b, float alpha) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDisable(GL_LIGHTING); // emiatt fénylik a légkör.
+    glDisable(GL_LIGHTING);
 
-    glColor4f(r, g, b, alpha); // emiatt átlátszó
+    glColor4f(r, g, b, alpha);
 
     GLUquadric* quad = gluNewQuadric();
-
     gluSphere(quad, size * 1.05f, 32, 32);
     gluDeleteQuadric(quad);
 
     glEnable(GL_LIGHTING);
     glDisable(GL_BLEND);
-    glColor3f(1.0f, 1.0f, 1.0f); //Szín visszaállítása.
+    glColor3f(1.0f, 1.0f, 1.0f);
+}
+
+// -------------------------------------------------------
+// RING PARTICLE SYSTEM
+// -------------------------------------------------------
+
+void init_ring_particles(Planet* p) {  // fixed typo
+    p->particle_count = 2000;
+    p->ring_particles = malloc(p->particle_count * sizeof(Particle));
+    if (!p->ring_particles) {
+        printf("Error: failed to allocate ring particles for %s\n", p->name);
+        p->particle_count = 0;
+        return;
+    }
+
+    float inner = (strcmp(p->name, "Uranusz") == 0) ? 1.5f : 1.3f;
+    float outer = (strcmp(p->name, "Uranusz") == 0) ? 1.7f : 2.1f;
+
+    for (int i = 0; i < p->particle_count; i++) {
+        Particle* part = &p->ring_particles[i];
+
+        part->angle    = (float)(rand() % 360);
+        float r        = ((float)rand() / (float)RAND_MAX) * (outer - inner) + inner;
+        part->distance = p->size * r;
+        part->size     = 0.02f;
+        part->speed    = 0.1f + ((float)rand() / (float)RAND_MAX) * 0.2f;
+
+        // slight vertical scatter so the ring isn't perfectly flat
+        part->y = ((float)rand() / (float)RAND_MAX) * 0.04f - 0.02f;
+    }
+}
+
+void draw_ring_particles(Planet* p) {
+    if (!p->ring_particles || p->particle_count == 0) return;
+
+    glDisable(GL_TEXTURE_2D);
+    glDisable(GL_LIGHTING);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glPointSize(2.0f);
+
+    // Saturn: warm golden/brown tint  Uranus: pale blue-grey tint
+    int is_uranus = (strcmp(p->name, "Uranusz") == 0);
+
+    glBegin(GL_POINTS);
+    for (int i = 0; i < p->particle_count; i++) {
+        Particle* part = &p->ring_particles[i];
+        float rad = part->angle * (float)M_PI / 180.0f;
+        float px  = cosf(rad) * part->distance;
+        float pz  = sinf(rad) * part->distance;
+
+        if (is_uranus)
+            glColor4f(0.75f, 0.85f, 0.9f, 0.55f);  // icy blue-grey
+        else
+            glColor4f(0.9f, 0.80f, 0.55f, 0.65f);   // warm golden
+
+        glVertex3f(px, part->y, pz);
+    }
+    glEnd();
+
+    glPointSize(1.0f);
+    glEnable(GL_LIGHTING);
+    glDisable(GL_BLEND);
+    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 }
