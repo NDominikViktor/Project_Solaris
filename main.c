@@ -40,6 +40,100 @@ void setup_projection() {
     glMatrixMode(GL_MODELVIEW);
 }
 
+void draw_hud(int target_index, float intensity, World* w) {
+    // Save lighting state so we restore it correctly regardless of
+    // what the help overlay (or anything else) left behind
+    GLboolean lighting_was_on = glIsEnabled(GL_LIGHTING);
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho(0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, -1, 1);
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    glDisable(GL_LIGHTING);
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // --- 1. INTENZITÁS SÁV (Bal alsó sarok) ---
+    // Háttér keret
+    glColor4f(1.0f, 1.0f, 1.0f, 0.2f);
+    glBegin(GL_QUADS);
+        glVertex2f(20, SCREEN_HEIGHT - 50);
+        glVertex2f(220, SCREEN_HEIGHT - 50);
+        glVertex2f(220, SCREEN_HEIGHT - 20);
+        glVertex2f(20, SCREEN_HEIGHT - 20);
+    glEnd();
+
+    // Aktuális szint (Sárga csík)
+    float fill = ((intensity - 0.1f) / 1.9f) * 200.0f;
+    glColor4f(1.0f, 0.7f, 0.0f, 0.8f);
+    glBegin(GL_QUADS);
+        glVertex2f(20, SCREEN_HEIGHT - 50);
+        glVertex2f(20 + fill, SCREEN_HEIGHT - 50);
+        glVertex2f(20 + fill, SCREEN_HEIGHT - 20);
+        glVertex2f(20, SCREEN_HEIGHT - 20);
+    glEnd();
+
+    // --- 2. CÉLPONT INFÓ (Jobb felső sarok) ---
+    if (target_index != -1) {
+        // Kis panel a kijelölt bolygónak
+        glColor4f(0.0f, 0.3f, 0.5f, 0.5f);
+        glBegin(GL_QUADS);
+            glVertex2f(SCREEN_WIDTH - 250, 20);
+            glVertex2f(SCREEN_WIDTH - 20, 20);
+            glVertex2f(SCREEN_WIDTH - 20, 80);
+            glVertex2f(SCREEN_WIDTH - 250, 80);
+        glEnd();
+
+        // Keret a panelnek
+        glColor4f(0.0f, 0.8f, 1.0f, 0.8f);
+        glBegin(GL_LINE_LOOP);
+            glVertex2f(SCREEN_WIDTH - 250, 20);
+            glVertex2f(SCREEN_WIDTH - 20, 20);
+            glVertex2f(SCREEN_WIDTH - 20, 80);
+            glVertex2f(SCREEN_WIDTH - 250, 80);
+        glEnd();
+
+        // Egy dekoratív célkereszt ikon a sarokban
+        glLineWidth(2.0f);
+        glBegin(GL_LINES);
+            glVertex2f(SCREEN_WIDTH - 235, 35); glVertex2f(SCREEN_WIDTH - 235, 65);
+            glVertex2f(SCREEN_WIDTH - 245, 50); glVertex2f(SCREEN_WIDTH - 225, 50);
+        glEnd();
+        glLineWidth(1.0f);
+    }
+
+    if (!show_help) {
+        glColor4f(0.0f, 0.8f, 1.0f, 0.5f); // Ciánkék keret
+        glBegin(GL_LINE_LOOP);
+        glVertex2f(20, 20); glVertex2f(100, 20);
+        glVertex2f(100, 50); glVertex2f(20, 50);
+        glEnd();
+
+        // Egy egyszerű "i" betű rajzolása vonalakkal (mint info ikon)
+        glBegin(GL_LINES);
+        glVertex2f(60, 30); glVertex2f(60, 32); // pont az i-re
+        glVertex2f(60, 37); glVertex2f(60, 45); // i szára
+        glEnd();
+    }
+
+    glDisable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
+
+    // Restore lighting to whatever state it was in before this call
+    if (lighting_was_on) glEnable(GL_LIGHTING);
+    else glDisable(GL_LIGHTING);
+
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+}
+
 int main(int argc, char* args[]) {
     (void)argc;
     (void)args;
@@ -114,6 +208,11 @@ int main(int argc, char* args[]) {
             if (event.type == SDL_QUIT) running = false;
 
             if (event.type == SDL_KEYDOWN) {
+                if (event.key.keysym.sym == SDLK_F1 || event.key.keysym.sym == SDLK_h){
+                    show_help = !show_help;
+        }
+
+
                 if (event.key.keysym.sym == SDLK_f) {
                     fog_enabled = !fog_enabled;
                     if (fog_enabled) { glEnable(GL_FOG);  printf("Kod: BE\n"); }
@@ -281,6 +380,7 @@ int main(int argc, char* args[]) {
             p->rotation_angle += p->rotation_speed;
         }
 
+        draw_hud(target_planet_index, sun_intensity, &world);
         // Help overlay
         if (show_help) {
             glMatrixMode(GL_PROJECTION);
