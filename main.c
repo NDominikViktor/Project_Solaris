@@ -411,7 +411,6 @@ int main(int argc, char* args[]) {
             glDisable(GL_BLEND);
             glDisable(GL_TEXTURE_2D);
             glEnable(GL_DEPTH_TEST);
-            glEnable(GL_CULL_FACE);
 
             glPopMatrix();
             glMatrixMode(GL_PROJECTION);
