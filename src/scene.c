@@ -22,10 +22,10 @@ GLuint load_texture(const char* filename) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     int width, height, nrChannels;
-    unsigned char *data = stbi_load(filename, &width, &height, &nrChannels, 0);
+    // Force 4 channels (RGBA) to avoid buffer overread with grayscale images
+    unsigned char *data = stbi_load(filename, &width, &height, &nrChannels, 4);
     if (data) {
-        GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         stbi_image_free(data);
     } else {
         printf("Texture loading error: %s\n", filename);
@@ -39,26 +39,46 @@ void load_planets(World* world, const char* filename) {
         printf("Error: I can't find the %s file!\n", filename);
         return;
     }
-    char line[128];
+    char line[256];
     world->count = 0;
-    while (fgets(line, sizeof(line), file) && world->count < 10) {
+    while (fgets(line, sizeof(line), file) && world->count < 20) {
         if (line[0] == '#') continue;
 
         char texture_name[64];
+        char parent_name[32] = "";
         Planet* p = &world->planets[world->count];
 
-        if (sscanf(line, "%[^,],%f,%f,%f,%f,%f,%[^,], %d, %f, %f, %f, %f",
+        // Remove newline at the end of line if present
+        line[strcspn(line, "\r\n")] = 0;
+
+        int fields = sscanf(line, "%[^,],%f,%f,%f,%f,%f,%[^,],%d,%f,%f,%f,%[^,\n]",
                    p->name, &p->distance, &p->size, &p->orbit_speed, &p->rotation_speed,
                    &p->axial_tilt, texture_name, &p->has_atmosphere,
-                   &p->atmo_r, &p->atmo_g, &p->atmo_b) == 11) {
+                   &p->atmo_r, &p->atmo_g, &p->atmo_b, parent_name);
 
+        if (fields >= 11) {
             p->current_angle  = 0.0f;
-            p->ring_particles = NULL;   // safe default
+            p->rotation_angle = 0.0f;
+            p->ring_particles = NULL;
             p->particle_count = 0;
+            p->world_x = 0.0f;
+            p->world_y = 0.0f;
+            p->world_z = 0.0f;
 
             char full_path[128];
             sprintf(full_path, "assets/%s", texture_name);
             p->texture_id = load_texture(full_path);
+
+            // Resolve parent index
+            p->parent_index = -1;
+            if (fields >= 12 && strlen(parent_name) > 0) {
+                for (int j = 0; j < world->count; j++) {
+                    if (strcmp(world->planets[j].name, parent_name) == 0) {
+                        p->parent_index = j;
+                        break;
+                    }
+                }
+            }
 
             world->count++;
         }
@@ -128,11 +148,7 @@ void draw_atmosphere(float size, float r, float g, float b, float alpha) {
     glColor3f(1.0f, 1.0f, 1.0f);
 }
 
-// -------------------------------------------------------
-// RING PARTICLE SYSTEM
-// -------------------------------------------------------
-
-void init_ring_particles(Planet* p) {  // fixed typo
+void init_ring_particles(Planet* p) {
     p->particle_count = 2000;
     p->ring_particles = malloc(p->particle_count * sizeof(Particle));
     if (!p->ring_particles) {
@@ -153,7 +169,6 @@ void init_ring_particles(Planet* p) {  // fixed typo
         part->size     = 0.02f;
         part->speed    = 0.1f + ((float)rand() / (float)RAND_MAX) * 0.2f;
 
-        // slight vertical scatter so the ring isn't perfectly flat
         part->y = ((float)rand() / (float)RAND_MAX) * 0.04f - 0.02f;
     }
 }
@@ -167,7 +182,6 @@ void draw_ring_particles(Planet* p) {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glPointSize(2.0f);
 
-    // Saturn: warm golden/brown tint  Uranus: pale blue-grey tint
     int is_uranus = (strcmp(p->name, "Uranusz") == 0);
 
     glBegin(GL_POINTS);
@@ -178,9 +192,9 @@ void draw_ring_particles(Planet* p) {
         float pz  = sinf(rad) * part->distance;
 
         if (is_uranus)
-            glColor4f(0.75f, 0.85f, 0.9f, 0.55f);  // icy blue-grey
+            glColor4f(0.75f, 0.85f, 0.9f, 0.55f);
         else
-            glColor4f(0.9f, 0.80f, 0.55f, 0.65f);   // warm golden
+            glColor4f(0.9f, 0.80f, 0.55f, 0.65f);
 
         glVertex3f(px, part->y, pz);
     }

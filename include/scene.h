@@ -28,15 +28,17 @@ typedef struct {
     float atmo_r, atmo_g, atmo_b;
     Particle* ring_particles;
     int particle_count;
+    int parent_index; // Index of the parent planet in the world.planets array
+    float world_x, world_y, world_z; // Absolute world coordinates
 } Planet;
 
 typedef struct World{
-    Planet planets[10];
+    Planet planets[20]; // Increased size to accommodate moons
     int count;
 } World;
 
 void load_planets(World* world, const char* filename);
-void init_ring_particles(Planet* p);   // fixed typo: init_rin -> init_ring
-void draw_ring_particles(Planet* p);   // new: draws the particle ring
+void init_ring_particles(Planet* p);
+void draw_ring_particles(Planet* p);
 
 #endif //SOLARIS_SCENE_H

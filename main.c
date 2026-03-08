@@ -44,6 +44,7 @@ void draw_hud(int target_index, float intensity, World* w) {
     // Save lighting state so we restore it correctly regardless of
     // what the help overlay (or anything else) left behind
     GLboolean lighting_was_on = glIsEnabled(GL_LIGHTING);
+    GLboolean cull_face_was_on = glIsEnabled(GL_CULL_FACE);
 
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
@@ -55,6 +56,7 @@ void draw_hud(int target_index, float intensity, World* w) {
 
     glDisable(GL_LIGHTING);
     glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE); // Ensure HUD is drawn regardless of vertex order
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -124,9 +126,12 @@ void draw_hud(int target_index, float intensity, World* w) {
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
 
-    // Restore lighting to whatever state it was in before this call
+    // Restore states
     if (lighting_was_on) glEnable(GL_LIGHTING);
     else glDisable(GL_LIGHTING);
+
+    if (cull_face_was_on) glEnable(GL_CULL_FACE);
+    else glDisable(GL_CULL_FACE);
 
     glPopMatrix();
     glMatrixMode(GL_PROJECTION);
@@ -210,7 +215,7 @@ int main(int argc, char* args[]) {
             if (event.type == SDL_KEYDOWN) {
                 if (event.key.keysym.sym == SDLK_F1 || event.key.keysym.sym == SDLK_h){
                     show_help = !show_help;
-        }
+                }
 
 
                 if (event.key.keysym.sym == SDLK_f) {
@@ -285,29 +290,43 @@ int main(int argc, char* args[]) {
         float light_pos[] = {0.0f, 0.0f, 0.0f, 1.0f};
         glLightfv(GL_LIGHT0, GL_POSITION, light_pos);
 
+        // --- NEW: Calculate planet positions hierarchically ---
+        for (int i = 0; i < world.count; i++) {
+            Planet* p = &world.planets[i];
+            float lx = cosf(p->current_angle) * p->distance;
+            float lz = sinf(p->current_angle) * p->distance;
+
+            if (p->parent_index != -1) {
+                Planet* parent = &world.planets[p->parent_index];
+                p->world_x = parent->world_x + lx;
+                p->world_y = parent->world_y;
+                p->world_z = parent->world_z + lz;
+            } else {
+                p->world_x = lx;
+                p->world_y = 0.0f;
+                p->world_z = lz;
+            }
+        }
+
         // Planet-follow camera
         if (target_planet_index != -1) {
             Planet* p = &world.planets[target_planet_index];
-            float px = cosf(p->current_angle) * p->distance;
-            float pz = sinf(p->current_angle) * p->distance;
-            camera.x = px + p->size * 3.0f;
-            camera.y = p->size * 2.0f;
-            camera.z = pz + p->size * 3.0f;
+            camera.x = p->world_x + p->size * 3.0f;
+            camera.y = p->world_y + p->size * 2.0f;
+            camera.z = p->world_z + p->size * 3.0f;
         }
 
         // Draw planets
         for (int i = 0; i < world.count; i++) {
             Planet* p = &world.planets[i];
-            float x = cosf(p->current_angle) * p->distance;
-            float z = sinf(p->current_angle) * p->distance;
 
             glPushMatrix();
-            glTranslatef(x, 0.0f, z);
+            glTranslatef(p->world_x, p->world_y, p->world_z);
 
             GLUquadric* quad = gluNewQuadric();
             gluQuadricTexture(quad, GL_TRUE);
 
-            if (p->distance < 0.1f) {
+            if (p->distance < 0.1f && p->parent_index == -1) { // Check for Sun
                 // --- SUN ---
                 glDisable(GL_LIGHTING);
                 glEnable(GL_TEXTURE_2D);
@@ -332,7 +351,7 @@ int main(int argc, char* args[]) {
                 glEnable(GL_LIGHTING);
 
             } else {
-                // --- PLANET ---
+                // --- PLANET or MOON ---
                 glEnable(GL_LIGHTING);
 
                 glPushMatrix();
@@ -411,6 +430,7 @@ int main(int argc, char* args[]) {
             glDisable(GL_BLEND);
             glDisable(GL_TEXTURE_2D);
             glEnable(GL_DEPTH_TEST);
+            glEnable(GL_CULL_FACE);
 
             glPopMatrix();
             glMatrixMode(GL_PROJECTION);
