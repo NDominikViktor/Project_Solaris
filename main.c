@@ -177,6 +177,8 @@ int main(int argc, char* args[]) {
     load_planets(&world, "assets/planets.csv");
     printf("Planet count: %d\n", world.count);
 
+    init_asteroid_belt();
+
     // ---------------------------------------------------------
     // NEW: initialise ring particles for Saturn and Uranus
     // ---------------------------------------------------------
@@ -279,10 +281,17 @@ int main(int argc, char* args[]) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         set_view(&camera);
 
+
+
         glPushMatrix();
             glTranslatef(camera.x, camera.y, camera.z);
             draw_skybox(skybox_texture_id);
         glPopMatrix();
+
+        glDisable(GL_LIGHTING); // Kikapcsoljuk a fényt, hogy a kövek saját színe látsszon
+        draw_asteroid_belt();
+        glEnable(GL_LIGHTING);  // Visszakapcsoljuk a bolygókhoz
+
 
         // Update light each frame
         float diffuse[] = {r * sun_intensity, g * sun_intensity, b * sun_intensity, 1.0f};
@@ -295,7 +304,6 @@ int main(int argc, char* args[]) {
             Planet* p = &world.planets[i];
             float lx = cosf(p->current_angle) * p->distance;
             float lz = sinf(p->current_angle) * p->distance;
-
             if (p->parent_index != -1) {
                 Planet* parent = &world.planets[p->parent_index];
                 p->world_x = parent->world_x + lx;

@@ -205,3 +205,41 @@ void draw_ring_particles(Planet* p) {
     glDisable(GL_BLEND);
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 }
+
+Asteroid asteroid_belt[MAX_ASTEROID];
+
+void init_asteroid_belt() {
+    for (int i = 0; i < MAX_ASTEROID; i++) {
+        // Mars (12.5) és Jupiter (20.0) közötti sáv:
+        // 14.5-nél kezdődik, és maximum 4.5 egységnyit adunk hozzá (így 19.0-ig tart)
+        float r = 14.5f + ((float)rand() / (float)RAND_MAX) * 4.5f;
+
+        asteroid_belt[i].distance = r;
+        asteroid_belt[i].angle = (float)(rand() % 360);
+        asteroid_belt[i].size = 0.02f + ((float)rand() / (float)RAND_MAX) * 0.05f;
+        asteroid_belt[i].orbit_speed = 0.005f + ((float)rand() / (float)RAND_MAX) * 0.01f;
+
+        // Egy nagyon pici függőleges szórás, hogy ne legyen "tökéletes" a vonal
+        asteroid_belt[i].y = ((float)rand() / (float)RAND_MAX) * 0.4f - 0.2f;
+    }
+}
+
+void draw_asteroid_belt() {
+    for (int i = 0; i < MAX_ASTEROID; i++) {
+        glPushMatrix();
+        float rad = asteroid_belt[i].angle * (M_PI / 180.0f);
+        float x = cosf(rad) * asteroid_belt[i].distance;
+        float z = sinf(rad) * asteroid_belt[i].distance;
+
+        glTranslatef(x, asteroid_belt[i].y, z);
+
+        // Rajzolás (kicsi pontok vagy gömbök)
+        GLUquadric* q = gluNewQuadric();
+        gluSphere(q, asteroid_belt[i].size, 4, 4);
+        gluDeleteQuadric(q);
+        glPopMatrix();
+
+        // MOZGÁS: Minden képkockánál egy picit növeljük a szöget
+        asteroid_belt[i].angle += asteroid_belt[i].orbit_speed;
+    }
+}

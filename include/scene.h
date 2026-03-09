@@ -37,8 +37,22 @@ typedef struct World{
     int count;
 } World;
 
+typedef struct {
+    float x, y, z;
+    float size;
+    float angle;
+    float distance;
+    float orbit_speed;
+} Asteroid;
+
+#define MAX_ASTEROID 500
+extern Asteroid asteroid_belt[MAX_ASTEROID];
+
 void load_planets(World* world, const char* filename);
 void init_ring_particles(Planet* p);
 void draw_ring_particles(Planet* p);
+
+void init_asteroid_belt();
+void draw_asteroid_belt();
 
 #endif //SOLARIS_SCENE_H
