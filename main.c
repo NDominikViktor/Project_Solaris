@@ -10,6 +10,7 @@
 #include <stdlib.h>
 
 
+
 World world;
 
 const int SCREEN_WIDTH = 1280;
@@ -38,6 +39,30 @@ void setup_projection() {
 
     glFrustum(-fW, fW, -fH, fH, zNear, zFar);
     glMatrixMode(GL_MODELVIEW);
+}
+
+void draw_text_simple(float x, float y, const char* text) {
+    glPushMatrix();
+    glTranslatef(x, y, 0);
+    glScalef(1.5f, 1.5f, 1.0f); // Kicsit megnöveljük a betűket
+    glLineWidth(2.0f);
+    glBegin(GL_LINES);
+    for (int i = 0; text[i] != '\0'; i++) {
+        float ox = i * 12.0f; // Betűköz
+        char c = text[i];
+        // Nagyon egyszerű "pálcika" betűk pár karakterre (Példa: F, M, J, S, H, U, N, E)
+        // Ha nincs itt egy betű, csak egy pontot rajzol, de a főbb bolygókhoz elég
+        if (c == 'F') { glVertex2f(ox, 0); glVertex2f(ox, 10); glVertex2f(ox, 0); glVertex2f(ox+8, 0); glVertex2f(ox, 5); glVertex2f(ox+5, 5); }
+        else if (c == 'M') { glVertex2f(ox, 10); glVertex2f(ox, 0); glVertex2f(ox, 0); glVertex2f(ox+4, 5); glVertex2f(ox+4, 5); glVertex2f(ox+8, 0); glVertex2f(ox+8, 0); glVertex2f(ox+8, 10); }
+        else if (c == 'J') { glVertex2f(ox+4, 0); glVertex2f(ox+4, 8); glVertex2f(ox, 8); glVertex2f(ox+4, 10); glVertex2f(ox, 10); glVertex2f(ox+8, 10); }
+        else if (c == 'S') { glVertex2f(ox+8, 0); glVertex2f(ox, 0); glVertex2f(ox, 0); glVertex2f(ox, 5); glVertex2f(ox, 5); glVertex2f(ox+8, 5); glVertex2f(ox+8, 5); glVertex2f(ox+8, 10); glVertex2f(ox+8, 10); glVertex2f(ox, 10); }
+        else { // Ha nem definiáltunk betűt (pl. kisbetűk), rajzolunk egy kis négyzetet
+            glVertex2f(ox, 8); glVertex2f(ox+2, 8); glVertex2f(ox, 10); glVertex2f(ox+2, 10);
+        }
+    }
+    glEnd();
+    glLineWidth(1.0f);
+    glPopMatrix();
 }
 
 void draw_hud(int target_index, float intensity, World* w) {
@@ -166,6 +191,8 @@ int main(int argc, char* args[]) {
     glEnable(GL_DEPTH_TEST);
     glClearColor(0.0f, 0.0f, 0.05f, 1.0f);
 
+    Uint32 last_time = SDL_GetTicks();
+    float delta_time = 0;
     bool running     = true;
     bool fog_enabled = true;
     SDL_Event event;
@@ -211,6 +238,11 @@ int main(int argc, char* args[]) {
     int target_planet_index = -1;
 
     while (running) {
+
+        Uint32 current_time = SDL_GetTicks();
+        delta_time = (current_time - last_time) / 1000.0f;
+        last_time = current_time;
+
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) running = false;
 
@@ -244,17 +276,42 @@ int main(int argc, char* args[]) {
         }
 
         const Uint8* state = SDL_GetKeyboardState(NULL);
-        float speed   = 0.1f;
-        float rad_yaw = camera.yaw * (float)M_PI / 180.0f;
+        float speed   = 0.2f;
+        if (state[SDL_SCANCODE_LSHIFT]) speed *= 3.0f;
 
-        if (state[SDL_SCANCODE_W])
-            update_camera_position(&camera, -sinf(rad_yaw)*speed, 0, -cosf(rad_yaw)*speed, &world);
+        float rad_yaw = camera.yaw * (float)M_PI / 180.0f;
+        float rad_pitch = camera.pitch * (float)M_PI / 180.0f;
+
+        if (state[SDL_SCANCODE_W] || state[SDL_SCANCODE_S] ||
+        state[SDL_SCANCODE_A] || state[SDL_SCANCODE_D] ||
+        state[SDL_SCANCODE_E] || state[SDL_SCANCODE_Q]) {
+            target_planet_index = -1;
+        }
+
+        if (state[SDL_SCANCODE_W]) {
+            float dx = -sinf(rad_yaw) * cosf(rad_pitch) * speed;
+            float dy =  sinf(rad_pitch) * speed;
+            float dz = -cosf(rad_yaw) * cosf(rad_pitch) * speed;
+            update_camera_position(&camera, dx, dy, dz, &world);
+        }
         if (state[SDL_SCANCODE_S])
-            update_camera_position(&camera,  sinf(rad_yaw)*speed, 0,  cosf(rad_yaw)*speed, &world);
+        {
+            float dx =  sinf(rad_yaw) * cosf(rad_pitch) * speed;
+            float dy = -sinf(rad_pitch) * speed;
+            float dz =  cosf(rad_yaw) * cosf(rad_pitch) * speed;
+            update_camera_position(&camera, dx, dy, dz, &world);
+        }
         if (state[SDL_SCANCODE_A])
-            update_camera_position(&camera, -cosf(rad_yaw)*speed, 0,  sinf(rad_yaw)*speed, &world);
+        {
+            update_camera_position(&camera, -cosf(rad_yaw) * speed, 0, sinf(rad_yaw) * speed, &world);
+        }
         if (state[SDL_SCANCODE_D])
-            update_camera_position(&camera,  cosf(rad_yaw)*speed, 0, -sinf(rad_yaw)*speed, &world);
+        {
+            update_camera_position(&camera,  cosf(rad_yaw) * speed, 0, -sinf(rad_yaw) * speed, &world);
+        }
+
+        if (state[SDL_SCANCODE_E]) camera.y += speed;
+        if (state[SDL_SCANCODE_Q]) camera.y -= speed;
 
         if (state[SDL_SCANCODE_UP])    camera.pitch += 1.0f;
         if (state[SDL_SCANCODE_DOWN])  camera.pitch -= 1.0f;
@@ -301,6 +358,8 @@ int main(int argc, char* args[]) {
 
         // --- NEW: Calculate planet positions hierarchically ---
         for (int i = 0; i < world.count; i++) {
+            world.planets[i].current_angle += world.planets[i].orbit_speed * delta_time * 10.0f;
+            world.planets[i].rotation_angle += world.planets[i].rotation_speed * delta_time * 50.0f;
             Planet* p = &world.planets[i];
             float lx = cosf(p->current_angle) * p->distance;
             float lz = sinf(p->current_angle) * p->distance;

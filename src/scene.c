@@ -9,6 +9,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <GL/glu.h>
 
+
 #include "stb_image.h"
 
 GLuint load_texture(const char* filename) {

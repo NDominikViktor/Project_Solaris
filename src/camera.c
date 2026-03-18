@@ -37,7 +37,9 @@ void update_camera_position(Camera* camera, float dx, float dy, float dz, struct
         float px = cosf(p->current_angle) * p->distance;
         float pz = sinf(p->current_angle) * p->distance;
 
-        float dist = sqrtf((newX - px) * (newX - px) + (newY - 0.0f) * (newY - 0.0f) + (newZ - pz) * (newZ - pz));
+        float dist = sqrtf((newX - p->world_x) * (newX - p->world_x) +
+                           (newY - p->world_y) * (newY - p->world_y) +
+                           (newZ - p->world_z) * (newZ - p->world_z));
 
         if (dist < (p->size + 0.5f)) {
             return; // Ütközés: nem frissítjük a pozíciót, kilépünk
