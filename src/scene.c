@@ -234,13 +234,14 @@ void draw_asteroid_belt() {
 
         glTranslatef(x, asteroid_belt[i].y, z);
 
-        // Rajzolás (kicsi pontok vagy gömbök)
+        float shade = 0.4f + ((float)(i % 10) / 10.0f) * 0.3f;
+        glColor3f(shade, shade * 0.85f, shade * 0.7f);
+
         GLUquadric* q = gluNewQuadric();
-        gluSphere(q, asteroid_belt[i].size, 4, 4);
+        gluSphere(q, asteroid_belt[i].size, 6, 6);
         gluDeleteQuadric(q);
         glPopMatrix();
 
-        // MOZGÁS: Minden képkockánál egy picit növeljük a szöget
         asteroid_belt[i].angle += asteroid_belt[i].orbit_speed;
     }
 }

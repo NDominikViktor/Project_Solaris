@@ -24,7 +24,11 @@ GLuint skybox_texture_id;
 
 int selected_planet_index = 0;
 
+
+
+
 GLuint load_texture(const char* filename);
+GLuint sun_glow_texture_id;
 void draw_skybox(GLuint texture_id);
 void draw_atmosphere(float size, float r, float g, float b, float alpha);
 
@@ -44,17 +48,64 @@ void setup_projection() {
 }
 
 void draw_text_simple(float x, float y, const char* text) {
-    glRasterPos2f(x, y);
+    glPushMatrix();
+    glTranslatef(x, y, 0);
+    glScalef(1.2f, 1.2f, 1.0f);
+    glLineWidth(2.0f);
+    glBegin(GL_LINES);
     for (int i = 0; text[i] != '\0'; i++) {
-        // Minden karaktert kis téglalapként rajzol ki
-        float cx = x + i * 8.0f;
-        glBegin(GL_QUADS);
-        glVertex2f(cx,       y);
-        glVertex2f(cx + 6,   y);
-        glVertex2f(cx + 6,   y + 10);
-        glVertex2f(cx,       y + 10);
-        glEnd();
+        float ox = i * 12.0f;
+        char c = text[i];
+        if (c >= 'a' && c <= 'z') c -= 32; // Kisbetűből nagybetűt csinálunk
+
+        // --- BETŰK (A-Z) ---
+        if (c == 'A') { glVertex2f(ox,10); glVertex2f(ox+4,0); glVertex2f(ox+4,0); glVertex2f(ox+8,10); glVertex2f(ox+2,5); glVertex2f(ox+6,5); }
+        else if (c == 'B') { glVertex2f(ox,0); glVertex2f(ox,10); glVertex2f(ox,0); glVertex2f(ox+6,2); glVertex2f(ox+6,2); glVertex2f(ox,5); glVertex2f(ox,5); glVertex2f(ox+7,7); glVertex2f(ox+7,7); glVertex2f(ox,10); }
+        else if (c == 'C') { glVertex2f(ox+8,2); glVertex2f(ox+4,0); glVertex2f(ox+4,0); glVertex2f(ox,4); glVertex2f(ox,4); glVertex2f(ox,6); glVertex2f(ox,6); glVertex2f(ox+4,10); glVertex2f(ox+4,10); glVertex2f(ox+8,8); }
+        else if (c == 'D') { glVertex2f(ox,0); glVertex2f(ox,10); glVertex2f(ox,0); glVertex2f(ox+6,0); glVertex2f(ox+6,0); glVertex2f(ox+8,5); glVertex2f(ox+8,5); glVertex2f(ox+6,10); glVertex2f(ox+6,10); glVertex2f(ox,10); }
+        else if (c == 'E') { glVertex2f(ox,0); glVertex2f(ox,10); glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox,5); glVertex2f(ox+6,5); glVertex2f(ox,10); glVertex2f(ox+8,10); }
+        else if (c == 'F') { glVertex2f(ox,0); glVertex2f(ox,10); glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox,5); glVertex2f(ox+6,5); }
+        else if (c == 'G') { glVertex2f(ox+8,2); glVertex2f(ox+4,0); glVertex2f(ox+4,0); glVertex2f(ox,4); glVertex2f(ox,4); glVertex2f(ox,10); glVertex2f(ox,10); glVertex2f(ox+8,10); glVertex2f(ox+8,10); glVertex2f(ox+8,5); glVertex2f(ox+8,5); glVertex2f(ox+4,5); }
+        else if (c == 'H') { glVertex2f(ox,0); glVertex2f(ox,10); glVertex2f(ox+8,0); glVertex2f(ox+8,10); glVertex2f(ox,5); glVertex2f(ox+8,5); }
+        else if (c == 'I') { glVertex2f(ox+4,0); glVertex2f(ox+4,10); glVertex2f(ox+1,0); glVertex2f(ox+7,0); glVertex2f(ox+1,10); glVertex2f(ox+7,10); }
+        else if (c == 'J') { glVertex2f(ox+8,0); glVertex2f(ox+8,8); glVertex2f(ox+8,8); glVertex2f(ox+4,10); glVertex2f(ox+4,10); glVertex2f(ox,8); }
+        else if (c == 'K') { glVertex2f(ox,0); glVertex2f(ox,10); glVertex2f(ox,5); glVertex2f(ox+8,0); glVertex2f(ox,5); glVertex2f(ox+8,10); }
+        else if (c == 'L') { glVertex2f(ox,0); glVertex2f(ox,10); glVertex2f(ox,10); glVertex2f(ox+8,10); }
+        else if (c == 'M') { glVertex2f(ox,10); glVertex2f(ox,0); glVertex2f(ox,0); glVertex2f(ox+4,5); glVertex2f(ox+4,5); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox+8,10); }
+        else if (c == 'N') { glVertex2f(ox,10); glVertex2f(ox,0); glVertex2f(ox,0); glVertex2f(ox+8,10); glVertex2f(ox+8,10); glVertex2f(ox+8,0); }
+        else if (c == 'O') { glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox+8,10); glVertex2f(ox+8,10); glVertex2f(ox,10); glVertex2f(ox,10); glVertex2f(ox,0); }
+        else if (c == 'P') { glVertex2f(ox,0); glVertex2f(ox,10); glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox+8,5); glVertex2f(ox+8,5); glVertex2f(ox,5); }
+        else if (c == 'Q') { glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox+8,10); glVertex2f(ox+8,10); glVertex2f(ox,10); glVertex2f(ox,10); glVertex2f(ox,0); glVertex2f(ox+4,6); glVertex2f(ox+8,10); }
+        else if (c == 'R') { glVertex2f(ox,0); glVertex2f(ox,10); glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox+8,5); glVertex2f(ox+8,5); glVertex2f(ox,5); glVertex2f(ox+4,5); glVertex2f(ox+8,10); }
+        else if (c == 'S') { glVertex2f(ox+8,0); glVertex2f(ox,0); glVertex2f(ox,0); glVertex2f(ox,5); glVertex2f(ox,5); glVertex2f(ox+8,5); glVertex2f(ox+8,5); glVertex2f(ox+8,10); glVertex2f(ox+8,10); glVertex2f(ox,10); }
+        else if (c == 'T') { glVertex2f(ox+4,0); glVertex2f(ox+4,10); glVertex2f(ox,0); glVertex2f(ox+8,0); }
+        else if (c == 'U') { glVertex2f(ox,0); glVertex2f(ox,10); glVertex2f(ox,10); glVertex2f(ox+8,10); glVertex2f(ox+8,10); glVertex2f(ox+8,0); }
+        else if (c == 'V') { glVertex2f(ox,0); glVertex2f(ox+4,10); glVertex2f(ox+4,10); glVertex2f(ox+8,0); }
+        else if (c == 'W') { glVertex2f(ox,0); glVertex2f(ox,10); glVertex2f(ox,10); glVertex2f(ox+4,5); glVertex2f(ox+4,5); glVertex2f(ox+8,10); glVertex2f(ox+8,10); glVertex2f(ox+8,0); }
+        else if (c == 'X') { glVertex2f(ox,0); glVertex2f(ox+8,10); glVertex2f(ox+8,0); glVertex2f(ox,10); }
+        else if (c == 'Y') { glVertex2f(ox,0); glVertex2f(ox+4,5); glVertex2f(ox+8,0); glVertex2f(ox+4,5); glVertex2f(ox+4,5); glVertex2f(ox+4,10); }
+        else if (c == 'Z') { glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox,10); glVertex2f(ox,10); glVertex2f(ox+8,10); }
+
+        // --- SZÁMOK (0-9) ---
+        else if (c == '0') { glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox+8,10); glVertex2f(ox+8,10); glVertex2f(ox,10); glVertex2f(ox,10); glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox,10); }
+        else if (c == '1') { glVertex2f(ox+4,0); glVertex2f(ox+4,10); glVertex2f(ox,2); glVertex2f(ox+4,0); }
+        else if (c == '2') { glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox+8,5); glVertex2f(ox+8,5); glVertex2f(ox,5); glVertex2f(ox,5); glVertex2f(ox,10); glVertex2f(ox,10); glVertex2f(ox+8,10); }
+        else if (c == '3') { glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox+8,10); glVertex2f(ox+8,10); glVertex2f(ox,10); glVertex2f(ox+4,5); glVertex2f(ox+8,5); }
+        else if (c == '4') { glVertex2f(ox,0); glVertex2f(ox,5); glVertex2f(ox,5); glVertex2f(ox+8,5); glVertex2f(ox+6,0); glVertex2f(ox+6,10); }
+        else if (c == '5') { glVertex2f(ox+8,0); glVertex2f(ox,0); glVertex2f(ox,0); glVertex2f(ox,5); glVertex2f(ox,5); glVertex2f(ox+8,5); glVertex2f(ox+8,5); glVertex2f(ox+8,10); glVertex2f(ox+8,10); glVertex2f(ox,10); }
+        else if (c == '6') { glVertex2f(ox,0); glVertex2f(ox,10); glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox,5); glVertex2f(ox+8,5); glVertex2f(ox+8,5); glVertex2f(ox+8,10); glVertex2f(ox+8,10); glVertex2f(ox,10); }
+        else if (c == '7') { glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox+4,10); }
+        else if (c == '8') { glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox+8,10); glVertex2f(ox+8,10); glVertex2f(ox,10); glVertex2f(ox,10); glVertex2f(ox,0); glVertex2f(ox,5); glVertex2f(ox+8,5); }
+        else if (c == '9') { glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox+8,10); glVertex2f(ox,5); glVertex2f(ox+8,5); glVertex2f(ox,0); glVertex2f(ox,5); }
+
+        // --- ÍRÁSJELEK ---
+        else if (c == '.') { glVertex2f(ox+3, 9); glVertex2f(ox+5, 9); glVertex2f(ox+3, 10); glVertex2f(ox+5, 10); }
+        else if (c == ':') { glVertex2f(ox+4, 2); glVertex2f(ox+4, 3); glVertex2f(ox+4, 7); glVertex2f(ox+4, 8); }
+        else if (c == '-') { glVertex2f(ox+2, 5); glVertex2f(ox+6, 5); }
     }
+    glEnd();
+    glLineWidth(1.0f);
+    glPopMatrix();
 }
 
 void draw_hud(int target_index, float intensity, World* w) {
@@ -164,6 +215,48 @@ void draw_hud(int target_index, float intensity, World* w) {
     glMatrixMode(GL_MODELVIEW);
 }
 
+void draw_sun_glow(float size, float r, float g, float b) {
+    glPushMatrix();
+    glDisable(GL_LIGHTING);
+    glDisable(GL_TEXTURE_2D);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE); // Izzó hatás
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+
+    int layers = 8;
+    for (int i = 1; i <= layers; i++) {
+        // Kifelé növő körök, de sokkal gyorsabban csökkenő átlátszóság
+        float current_size = size * (1.0f + (float)i * 0.25f);
+        float alpha = 0.12f * (1.0f - (float)i / layers);
+
+        glColor4f(r, g, b, alpha);
+
+        // Billboard mátrix: hogy mindig felénk nézzen
+        float mv[16];
+        glGetFloatv(GL_MODELVIEW_MATRIX, mv);
+        for(int k=0; k<3; k++) for(int j=0; j<3; j++) {
+            if(k==j) mv[k*4+j] = 1.0f; else mv[k*4+j] = 0.0f;
+        }
+        glLoadMatrixf(mv);
+
+        glBegin(GL_TRIANGLE_FAN);
+        glVertex3f(0, 0, 0);
+        // 2 fokonként rajzolunk (180 pont egy körhöz), ettől lesz sima a széle
+        for (int angle = 0; angle <= 360; angle += 2) {
+            float rad = angle * 3.14159f / 180.0f;
+            glVertex3f(cosf(rad) * current_size, sinf(rad) * current_size, 0);
+        }
+        glEnd();
+    }
+
+    glDepthMask(GL_TRUE);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_LIGHTING);
+    glDisable(GL_BLEND);
+    glPopMatrix();
+}
+
 int main(int argc, char* args[]) {
     (void)argc;
     (void)args;
@@ -206,6 +299,8 @@ int main(int argc, char* args[]) {
     printf("Planet count: %d\n", world.count);
 
     init_asteroid_belt();
+
+
 
     // ---------------------------------------------------------
     // NEW: initialise ring particles for Saturn and Uranus
@@ -433,10 +528,22 @@ int main(int argc, char* args[]) {
                 gluQuadricTexture(sunQuad, GL_TRUE);
                 gluSphere(sunQuad, current_sun_size, 32, 32);
                 gluDeleteQuadric(sunQuad);
-
+                // Nap glow - csak EGY finom réteg
+                draw_sun_glow(current_sun_size * 1.5f, r, g, b);
+                glDisable(GL_LIGHTING);
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                glColor4f(1.0f, 0.9f, 0.3f, 0.08f);
+                GLUquadric* glowQuad = gluNewQuadric();
+                gluSphere(glowQuad, current_sun_size * 1.6f, 32, 32);
+                gluDeleteQuadric(glowQuad);
+                glDisable(GL_BLEND);
+                glEnable(GL_LIGHTING);
                 glColor3f(1.0f, 1.0f, 1.0f);
                 glDisable(GL_TEXTURE_2D);
                 glEnable(GL_LIGHTING);
+
+
 
             } else {
                 // --- PLANET or MOON ---
