@@ -44,32 +44,21 @@ void setup_projection() {
 }
 
 void draw_text_simple(float x, float y, const char* text) {
-    glPushMatrix();
-    glTranslatef(x, y, 0);
-    glScalef(1.5f, 1.5f, 1.0f); // Kicsit megnöveljük a betűket
-    glLineWidth(2.0f);
-    glBegin(GL_LINES);
+    glRasterPos2f(x, y);
     for (int i = 0; text[i] != '\0'; i++) {
-        float ox = i * 12.0f; // Betűköz
-        char c = text[i];
-        // Nagyon egyszerű "pálcika" betűk pár karakterre (Példa: F, M, J, S, H, U, N, E)
-        // Ha nincs itt egy betű, csak egy pontot rajzol, de a főbb bolygókhoz elég
-        if (c == 'F') { glVertex2f(ox, 0); glVertex2f(ox, 10); glVertex2f(ox, 0); glVertex2f(ox+8, 0); glVertex2f(ox, 5); glVertex2f(ox+5, 5); }
-        else if (c == 'M') { glVertex2f(ox, 10); glVertex2f(ox, 0); glVertex2f(ox, 0); glVertex2f(ox+4, 5); glVertex2f(ox+4, 5); glVertex2f(ox+8, 0); glVertex2f(ox+8, 0); glVertex2f(ox+8, 10); }
-        else if (c == 'J') { glVertex2f(ox+4, 0); glVertex2f(ox+4, 8); glVertex2f(ox, 8); glVertex2f(ox+4, 10); glVertex2f(ox, 10); glVertex2f(ox+8, 10); }
-        else if (c == 'S') { glVertex2f(ox+8, 0); glVertex2f(ox, 0); glVertex2f(ox, 0); glVertex2f(ox, 5); glVertex2f(ox, 5); glVertex2f(ox+8, 5); glVertex2f(ox+8, 5); glVertex2f(ox+8, 10); glVertex2f(ox+8, 10); glVertex2f(ox, 10); }
-        else { // Ha nem definiáltunk betűt (pl. kisbetűk), rajzolunk egy kis négyzetet
-            glVertex2f(ox, 8); glVertex2f(ox+2, 8); glVertex2f(ox, 10); glVertex2f(ox+2, 10);
-        }
+        // Minden karaktert kis téglalapként rajzol ki
+        float cx = x + i * 8.0f;
+        glBegin(GL_QUADS);
+        glVertex2f(cx,       y);
+        glVertex2f(cx + 6,   y);
+        glVertex2f(cx + 6,   y + 10);
+        glVertex2f(cx,       y + 10);
+        glEnd();
     }
-    glEnd();
-    glLineWidth(1.0f);
-    glPopMatrix();
 }
 
 void draw_hud(int target_index, float intensity, World* w) {
-    // Save lighting state so we restore it correctly regardless of
-    // what the help overlay (or anything else) left behind
+    // Állapotok mentése, hogy a HUD ne rontsa el a 3D renderelést
     GLboolean lighting_was_on = glIsEnabled(GL_LIGHTING);
     GLboolean cull_face_was_on = glIsEnabled(GL_CULL_FACE);
 
@@ -83,12 +72,11 @@ void draw_hud(int target_index, float intensity, World* w) {
 
     glDisable(GL_LIGHTING);
     glDisable(GL_DEPTH_TEST);
-    glDisable(GL_CULL_FACE); // Ensure HUD is drawn regardless of vertex order
+    glDisable(GL_CULL_FACE);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    // --- 1. INTENZITÁS SÁV (Bal alsó sarok) ---
-    // Háttér keret
+    // --- 1. INTENZITÁS SÁV (Bal alsó sarok - Fényerő) ---
     glColor4f(1.0f, 1.0f, 1.0f, 0.2f);
     glBegin(GL_QUADS);
         glVertex2f(20, SCREEN_HEIGHT - 50);
@@ -97,7 +85,6 @@ void draw_hud(int target_index, float intensity, World* w) {
         glVertex2f(20, SCREEN_HEIGHT - 20);
     glEnd();
 
-    // Aktuális szint (Sárga csík)
     float fill = ((intensity - 0.1f) / 1.9f) * 200.0f;
     glColor4f(1.0f, 0.7f, 0.0f, 0.8f);
     glBegin(GL_QUADS);
@@ -107,58 +94,69 @@ void draw_hud(int target_index, float intensity, World* w) {
         glVertex2f(20, SCREEN_HEIGHT - 20);
     glEnd();
 
-    // --- 2. CÉLPONT INFÓ (Jobb felső sarok) ---
-    if (target_index != -1) {
-        // Kis panel a kijelölt bolygónak
-        glColor4f(0.0f, 0.3f, 0.5f, 0.5f);
+    // --- 2. BOLYGÓ INFO PANEL (Jobb felső sarok) ---
+    // Csak akkor rajzoljuk, ha van kijelölt bolygó
+    if (target_index != -1 && target_index < w->count) {
+        Planet* p = &w->planets[target_index];
+
+        // Panel háttér (sötétkék, áttetsző)
+        glColor4f(0.0f, 0.1f, 0.2f, 0.7f);
         glBegin(GL_QUADS);
-            glVertex2f(SCREEN_WIDTH - 250, 20);
+            glVertex2f(SCREEN_WIDTH - 280, 20);
             glVertex2f(SCREEN_WIDTH - 20, 20);
-            glVertex2f(SCREEN_WIDTH - 20, 80);
-            glVertex2f(SCREEN_WIDTH - 250, 80);
+            glVertex2f(SCREEN_WIDTH - 20, 160);
+            glVertex2f(SCREEN_WIDTH - 280, 160);
         glEnd();
 
-        // Keret a panelnek
-        glColor4f(0.0f, 0.8f, 1.0f, 0.8f);
+        // Panel keret (neon kék)
+        glColor4f(0.0f, 0.8f, 1.0f, 1.0f);
         glBegin(GL_LINE_LOOP);
-            glVertex2f(SCREEN_WIDTH - 250, 20);
+            glVertex2f(SCREEN_WIDTH - 280, 20);
             glVertex2f(SCREEN_WIDTH - 20, 20);
-            glVertex2f(SCREEN_WIDTH - 20, 80);
-            glVertex2f(SCREEN_WIDTH - 250, 80);
+            glVertex2f(SCREEN_WIDTH - 20, 160);
+            glVertex2f(SCREEN_WIDTH - 280, 160);
         glEnd();
 
-        // Egy dekoratív célkereszt ikon a sarokban
-        glLineWidth(2.0f);
-        glBegin(GL_LINES);
-            glVertex2f(SCREEN_WIDTH - 235, 35); glVertex2f(SCREEN_WIDTH - 235, 65);
-            glVertex2f(SCREEN_WIDTH - 245, 50); glVertex2f(SCREEN_WIDTH - 225, 50);
-        glEnd();
-        glLineWidth(1.0f);
+        // Szöveges adatok kiírása a draw_text_simple segítségével
+        char buffer[64];
+
+        // Név kiírása (Fehérrel)
+        glColor3f(1.0f, 1.0f, 1.0f);
+        draw_text_simple(SCREEN_WIDTH - 260, 40, p->name);
+
+        // Távolság
+        sprintf(buffer, "TAV: %.1f", p->distance);
+        draw_text_simple(SCREEN_WIDTH - 260, 75, buffer);
+
+        // Méret
+        sprintf(buffer, "MERET: %.2f", p->size);
+        draw_text_simple(SCREEN_WIDTH - 260, 110, buffer);
+
+        // Keringési sebesség (opcionális extra)
+        sprintf(buffer, "SEB: %.3f", p->orbit_speed);
+        draw_text_simple(SCREEN_WIDTH - 260, 140, buffer);
     }
 
+    // --- 3. HELP IKON / KERET (Bal felső sarok) ---
     if (!show_help) {
-        glColor4f(0.0f, 0.8f, 1.0f, 0.5f); // Ciánkék keret
+        glColor4f(0.0f, 0.8f, 1.0f, 0.5f);
         glBegin(GL_LINE_LOOP);
-        glVertex2f(20, 20); glVertex2f(100, 20);
-        glVertex2f(100, 50); glVertex2f(20, 50);
+            glVertex2f(20, 20); glVertex2f(100, 20);
+            glVertex2f(100, 50); glVertex2f(20, 50);
         glEnd();
 
-        // Egy egyszerű "i" betű rajzolása vonalakkal (mint info ikon)
         glBegin(GL_LINES);
-        glVertex2f(60, 30); glVertex2f(60, 32); // pont az i-re
-        glVertex2f(60, 37); glVertex2f(60, 45); // i szára
+            glVertex2f(60, 30); glVertex2f(60, 32); // 'i' pontja
+            glVertex2f(60, 37); glVertex2f(60, 45); // 'i' szára
         glEnd();
     }
 
+    // Visszaállítjuk az eredeti állapotokat
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
 
-    // Restore states
     if (lighting_was_on) glEnable(GL_LIGHTING);
-    else glDisable(GL_LIGHTING);
-
     if (cull_face_was_on) glEnable(GL_CULL_FACE);
-    else glDisable(GL_CULL_FACE);
 
     glPopMatrix();
     glMatrixMode(GL_PROJECTION);
