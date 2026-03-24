@@ -8,7 +8,7 @@
 #include <math.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <GL/glu.h>
-
+#include "camera.h"
 
 #include "stb_image.h"
 
@@ -242,5 +242,60 @@ void draw_asteroid_belt() {
 
         // MOZGÁS: Minden képkockánál egy picit növeljük a szöget
         asteroid_belt[i].angle += asteroid_belt[i].orbit_speed;
+    }
+}
+
+// távolság kiszámítása két pont között.
+float dist3D(float x1, float y1, float z1, float x2, float y2, float z2) {
+    return sqrtf(powf(x2 - x1, 2) + powf(y2 - y1, 2) + powf(z2 - z1, 2));
+}
+
+// sugár-gömb metszés ellenörzése
+bool ray_sphere_intersection(Vec3 origin, Vec3 dir, Vec3 sphere_pos, float radius) {
+    Vec3 oc = {origin.x - sphere_pos.x, origin.y - sphere_pos.y, origin.z - sphere_pos.z};
+    float b = 2.0f * (oc.x * dir.x + oc.y * dir.y + oc.z * dir.z);
+    float c = (oc.x * oc.x + oc.y * oc.y + oc.z * oc.z) - radius * radius;
+    float discriminant = b * b - 4 * c;
+    return (discriminant > 0);
+}
+
+void pick_planet(int mouseX, int mouseY, void* cam_ptr, void* world_ptr) {
+    // Visszaalakítjuk a mutatókat a rendes típusukra
+    Camera* cam = (Camera*)cam_ptr;
+    World* world = (World*)world_ptr;
+
+    GLint viewport[4];
+    GLdouble modelview[16];
+    GLdouble projection[16];
+    GLdouble posX, posY, posZ, farX, farY, farZ;
+
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    glGetDoublev(GL_MODELVIEW_MATRIX, modelview);
+    glGetDoublev(GL_PROJECTION_MATRIX, projection);
+
+    float winX = (float)mouseX;
+    float winY = (float)viewport[3] - (float)mouseY;
+
+    gluUnProject(winX, winY, 0.0, modelview, projection, viewport, &posX, &posY, &posZ);
+    gluUnProject(winX, winY, 1.0, modelview, projection, viewport, &farX, &farY, &farZ);
+
+    Vec3 ray_origin = { (float)posX, (float)posY, (float)posZ };
+    Vec3 ray_dir = { (float)(farX - posX), (float)(farY - posY), (float)(farZ - posZ) };
+
+    float len = sqrtf(ray_dir.x * ray_dir.x + ray_dir.y * ray_dir.y + ray_dir.z * ray_dir.z);
+    if (len > 0) {
+        ray_dir.x /= len; ray_dir.y /= len; ray_dir.z /= len;
+    }
+
+    extern int selected_planet_index;
+
+    for (int i = 0; i < world->count; i++) {
+        Vec3 planet_pos = { world->planets[i].world_x, world->planets[i].world_y, world->planets[i].world_z };
+        // A méretet kicsit megnöveljük (1.5x), hogy könnyebb legyen eltalálni
+        if (ray_sphere_intersection(ray_origin, ray_dir, planet_pos, world->planets[i].size * 1.5f)) {
+            selected_planet_index = i;
+            printf("Bolygo kivalasztva: %s\n", world->planets[i].name);
+            break;
+        }
     }
 }

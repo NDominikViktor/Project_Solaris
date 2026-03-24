@@ -4,7 +4,12 @@
 
 #ifndef SCENE_H
 #define SCENE_H
+#include <math.h>
 #include <GL/gl.h>
+#include <stdbool.h>
+
+
+struct Camera;
 
 typedef struct {
     float x, y, z;
@@ -45,13 +50,20 @@ typedef struct {
     float orbit_speed;
 } Asteroid;
 
+typedef struct {
+    float x, y, z;
+} Vec3;
+
+
 #define MAX_ASTEROID 500
 extern Asteroid asteroid_belt[MAX_ASTEROID];
 
 void load_planets(World* world, const char* filename);
 void init_ring_particles(Planet* p);
 void draw_ring_particles(Planet* p);
-
+// scene.h-ban így nézzen ki:
+void pick_planet(int mouseX, int mouseY, void* cam_ptr, void* world_ptr);
+bool ray_sphere_intersection(Vec3 origin, Vec3 dir, Vec3 sphere_pos, float radius);
 void init_asteroid_belt();
 void draw_asteroid_belt();
 

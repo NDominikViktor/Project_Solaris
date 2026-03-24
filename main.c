@@ -22,6 +22,8 @@ bool show_help = false;
 GLuint help_texture_id;
 GLuint skybox_texture_id;
 
+int selected_planet_index = 0;
+
 GLuint load_texture(const char* filename);
 void draw_skybox(GLuint texture_id);
 void draw_atmosphere(float size, float r, float g, float b, float alpha);
@@ -184,7 +186,8 @@ int main(int argc, char* args[]) {
         printf("window error: %s\n", SDL_GetError());
         return 1;
     }
-    SDL_SetRelativeMouseMode(SDL_TRUE);
+    SDL_SetRelativeMouseMode(SDL_FALSE);
+    SDL_ShowCursor(SDL_ENABLE);
 
     SDL_GLContext glContext = SDL_GL_CreateContext(window);
 
@@ -246,11 +249,31 @@ int main(int argc, char* args[]) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) running = false;
 
+            if (event.type == SDL_MOUSEBUTTONDOWN) {
+                if (event.button.button == SDL_BUTTON_LEFT) {
+                    // Itt hívjuk meg a kijelölést
+                    pick_planet(event.button.x, event.button.y, &camera, &world);
+                    // Átadjuk a kijelölt indexet a HUD-nak is, ha akarjuk
+                    target_planet_index = selected_planet_index;
+                }
+            }
+
+            // Kamera forgatása (csak ha a jobb gomb le van nyomva)
+            if (event.type == SDL_MOUSEMOTION) {
+                if (SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
+                    float sensitivity = 0.2f;
+                    camera.yaw   -= event.motion.xrel * sensitivity;
+                    camera.pitch -= event.motion.yrel * sensitivity;
+
+                    if (camera.pitch >  89.0f) camera.pitch =  89.0f;
+                    if (camera.pitch < -89.0f) camera.pitch = -89.0f;
+                }
+            }
+
             if (event.type == SDL_KEYDOWN) {
                 if (event.key.keysym.sym == SDLK_F1 || event.key.keysym.sym == SDLK_h){
                     show_help = !show_help;
                 }
-
 
                 if (event.key.keysym.sym == SDLK_f) {
                     fog_enabled = !fog_enabled;
