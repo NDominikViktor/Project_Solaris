@@ -48,6 +48,12 @@ typedef struct {
     float angle;
     float distance;
     float orbit_speed;
+    float scale_x, scale_y, scale_z;  // lapított alak
+    float rot_angle;                   // saját forgás szöge
+    float rot_speed;                   // saját forgás sebessége
+    float rot_axis_x, rot_axis_y, rot_axis_z; // forgás tengelye
+    float color_r, color_g, color_b;   // szín
+    float orbit_eccentricity;          // ellipszis
 } Asteroid;
 
 typedef struct {

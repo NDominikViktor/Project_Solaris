@@ -257,6 +257,111 @@ void draw_sun_glow(float size, float r, float g, float b) {
     glPopMatrix();
 }
 
+typedef struct {
+    float x, y, z;
+    float angle;
+    float speed;
+} Comet;
+
+Comet halley;
+
+void draw_asteroid_shape(float radius) {
+    int lats = 16;
+    int longs = 16;
+
+    for (int i = 0; i <= lats; i++) {
+        float lat0 = 3.14159f * (-0.5f + (float)(i - 1) / lats);
+        float z0 = sin(lat0); float zr0 = cos(lat0);
+        float lat1 = 3.14159f * (-0.5f + (float)i / lats);
+        float z1 = sin(lat1); float zr1 = cos(lat1);
+
+        glBegin(GL_QUAD_STRIP);
+        for (int j = 0; j <= longs; j++) {
+            float lng = 2.0f * 3.14159f * (float)(j - 1) / longs;
+            float x = cos(lng); float y = sin(lng);
+
+            float noise = 1.0f +
+                          0.12f * sinf(i * 0.4f) * cosf(j * 0.5f) +
+                          0.06f * sinf(i * 2.5f) +
+                          0.04f * cosf(j * 3.0f);
+
+            glNormal3f(x * zr0, y * zr0, z0);
+            glVertex3f(x * zr0 * radius * noise, y * zr0 * radius * noise, z0 * radius * noise);
+            glNormal3f(x * zr1, y * zr1, z1);
+            glVertex3f(x * zr1 * radius * noise, y * zr1 * radius * noise, z1 * radius * noise);
+        }
+        glEnd();
+    }
+}
+
+void draw_comet(Comet* c, float delta_time) {
+    float a = 40.0f;
+    float b = 15.0f;
+    c->angle += c->speed * delta_time;
+    c->x = cosf(c->angle) * a;
+    c->y = sinf(c->angle * 0.5f) * 10.0f;
+    c->z = sinf(c->angle) * b;
+
+    // Normalizált csóva irány fix hosszal
+    float len = sqrtf(c->x*c->x + c->y*c->y + c->z*c->z);
+    float tail_x = (c->x / len) * 6.0f;
+    float tail_y = (c->y / len) * 6.0f;
+    float tail_z = (c->z / len) * 6.0f;
+
+    glPushMatrix();
+    glTranslatef(c->x, c->y, c->z);
+
+    // Üstökös magja
+    glEnable(GL_LIGHTING);
+    glEnable(GL_COLOR_MATERIAL);
+    glColor3f(0.8f, 0.85f, 0.9f);
+    draw_asteroid_shape(0.4f);
+
+    // Izzás - sima gömb blend-del
+    glDisable(GL_LIGHTING);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+    glDepthMask(GL_FALSE);
+
+    glColor4f(0.7f, 0.9f, 1.0f, 0.3f);
+    GLUquadric* glow = gluNewQuadric();
+    gluSphere(glow, 0.55f, 16, 16);
+    gluDeleteQuadric(glow);
+
+    // Csóva rétegek
+    float tail_lengths[5] = {1.2f, 1.8f, 2.5f, 3.5f, 4.5f};
+    float tail_alphas[5]  = {0.35f, 0.22f, 0.12f, 0.06f, 0.02f};
+    float tail_widths[5]  = {0.35f, 0.55f, 0.8f,  1.1f,  1.5f};
+
+    for (int i = 0; i < 5; i++) {
+        glColor4f(0.6f, 0.85f, 1.0f, tail_alphas[i]);
+        glBegin(GL_TRIANGLES);
+            glVertex3f(0, 0, 0);
+            glVertex3f(tail_x * tail_lengths[i],
+                       tail_y * tail_lengths[i] + tail_widths[i],
+                       tail_z * tail_lengths[i]);
+            glVertex3f(tail_x * tail_lengths[i],
+                       tail_y * tail_lengths[i] - tail_widths[i],
+                       tail_z * tail_lengths[i]);
+        glEnd();
+
+        glBegin(GL_TRIANGLES);
+            glVertex3f(0, 0, 0);
+            glVertex3f(tail_x * tail_lengths[i] + tail_widths[i],
+                       tail_y * tail_lengths[i],
+                       tail_z * tail_lengths[i]);
+            glVertex3f(tail_x * tail_lengths[i] - tail_widths[i],
+                       tail_y * tail_lengths[i],
+                       tail_z * tail_lengths[i]);
+        glEnd();
+    }
+
+    glDepthMask(GL_TRUE);
+    glDisable(GL_BLEND);
+    glEnable(GL_LIGHTING);
+    glPopMatrix();
+}
+
 int main(int argc, char* args[]) {
     (void)argc;
     (void)args;
@@ -299,6 +404,9 @@ int main(int argc, char* args[]) {
     printf("Planet count: %d\n", world.count);
 
     init_asteroid_belt();
+
+    halley.angle = 0;
+    halley.speed = 0.5;
 
 
 
@@ -593,6 +701,13 @@ int main(int argc, char* args[]) {
             p->current_angle  += p->orbit_speed * 0.001f;
             p->rotation_angle += p->rotation_speed;
         }
+
+        // Üstökös mozgatása
+        halley.angle += 0.002f;
+        if (halley.angle > 6.28f) halley.angle = 0;
+
+        // Rajzolás
+        draw_comet(&halley, delta_time);
 
         draw_hud(target_planet_index, sun_intensity, &world);
         // Help overlay

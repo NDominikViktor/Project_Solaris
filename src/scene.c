@@ -211,31 +211,74 @@ Asteroid asteroid_belt[MAX_ASTEROID];
 
 void init_asteroid_belt() {
     for (int i = 0; i < MAX_ASTEROID; i++) {
-        // Mars (12.5) és Jupiter (20.0) közötti sáv:
-        // 14.5-nél kezdődik, és maximum 4.5 egységnyit adunk hozzá (így 19.0-ig tart)
         float r = 14.5f + ((float)rand() / (float)RAND_MAX) * 4.5f;
-
         asteroid_belt[i].distance = r;
         asteroid_belt[i].angle = (float)(rand() % 360);
         asteroid_belt[i].size = 0.02f + ((float)rand() / (float)RAND_MAX) * 0.05f;
         asteroid_belt[i].orbit_speed = 0.005f + ((float)rand() / (float)RAND_MAX) * 0.01f;
-
-        // Egy nagyon pici függőleges szórás, hogy ne legyen "tökéletes" a vonal
         asteroid_belt[i].y = ((float)rand() / (float)RAND_MAX) * 0.4f - 0.2f;
+
+        // Lapított alak
+        asteroid_belt[i].scale_x = 0.5f + ((float)rand() / (float)RAND_MAX) * 1.0f;
+        asteroid_belt[i].scale_y = 0.5f + ((float)rand() / (float)RAND_MAX) * 1.0f;
+        asteroid_belt[i].scale_z = 0.5f + ((float)rand() / (float)RAND_MAX) * 1.0f;
+
+        // Saját forgás
+        asteroid_belt[i].rot_angle = (float)(rand() % 360);
+        asteroid_belt[i].rot_speed = 0.2f + ((float)rand() / (float)RAND_MAX) * 0.8f;
+        asteroid_belt[i].rot_axis_x = ((float)rand() / (float)RAND_MAX);
+        asteroid_belt[i].rot_axis_y = ((float)rand() / (float)RAND_MAX);
+        asteroid_belt[i].rot_axis_z = ((float)rand() / (float)RAND_MAX);
+
+        // Szín: szürke, barnás, vöröses
+        float base = 0.35f + ((float)rand() / (float)RAND_MAX) * 0.3f;
+        int color_type = rand() % 3;
+        if (color_type == 0) {
+            // szürke
+            asteroid_belt[i].color_r = base;
+            asteroid_belt[i].color_g = base;
+            asteroid_belt[i].color_b = base;
+        } else if (color_type == 1) {
+            // barnás
+            asteroid_belt[i].color_r = base + 0.15f;
+            asteroid_belt[i].color_g = base * 0.8f;
+            asteroid_belt[i].color_b = base * 0.6f;
+        } else {
+            // vöröses
+            asteroid_belt[i].color_r = base + 0.2f;
+            asteroid_belt[i].color_g = base * 0.6f;
+            asteroid_belt[i].color_b = base * 0.5f;
+        }
+
+        // Ellipszis
+        asteroid_belt[i].orbit_eccentricity = 0.8f + ((float)rand() / (float)RAND_MAX) * 0.4f;
     }
 }
 
 void draw_asteroid_belt() {
     for (int i = 0; i < MAX_ASTEROID; i++) {
         glPushMatrix();
+
         float rad = asteroid_belt[i].angle * (M_PI / 180.0f);
         float x = cosf(rad) * asteroid_belt[i].distance;
-        float z = sinf(rad) * asteroid_belt[i].distance;
+        float z = sinf(rad) * asteroid_belt[i].distance * asteroid_belt[i].orbit_eccentricity;
 
         glTranslatef(x, asteroid_belt[i].y, z);
 
-        float shade = 0.4f + ((float)(i % 10) / 10.0f) * 0.3f;
-        glColor3f(shade, shade * 0.85f, shade * 0.7f);
+        // Saját forgás
+        glRotatef(asteroid_belt[i].rot_angle,
+                  asteroid_belt[i].rot_axis_x,
+                  asteroid_belt[i].rot_axis_y,
+                  asteroid_belt[i].rot_axis_z);
+
+        // Lapított alak
+        glScalef(asteroid_belt[i].scale_x,
+                 asteroid_belt[i].scale_y,
+                 asteroid_belt[i].scale_z);
+
+        glColor3f(asteroid_belt[i].color_r,
+                  asteroid_belt[i].color_g,
+                  asteroid_belt[i].color_b);
 
         GLUquadric* q = gluNewQuadric();
         gluSphere(q, asteroid_belt[i].size, 6, 6);
@@ -243,6 +286,7 @@ void draw_asteroid_belt() {
         glPopMatrix();
 
         asteroid_belt[i].angle += asteroid_belt[i].orbit_speed;
+        asteroid_belt[i].rot_angle += asteroid_belt[i].rot_speed;
     }
 }
 
