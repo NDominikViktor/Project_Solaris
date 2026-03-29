@@ -218,39 +218,39 @@ void init_asteroid_belt() {
         asteroid_belt[i].orbit_speed = 0.005f + ((float)rand() / (float)RAND_MAX) * 0.01f;
         asteroid_belt[i].y = ((float)rand() / (float)RAND_MAX) * 0.4f - 0.2f;
 
-        // Lapított alak
+        // Flattened shape
         asteroid_belt[i].scale_x = 0.5f + ((float)rand() / (float)RAND_MAX) * 1.0f;
         asteroid_belt[i].scale_y = 0.5f + ((float)rand() / (float)RAND_MAX) * 1.0f;
         asteroid_belt[i].scale_z = 0.5f + ((float)rand() / (float)RAND_MAX) * 1.0f;
 
-        // Saját forgás
+        // Self-rotation
         asteroid_belt[i].rot_angle = (float)(rand() % 360);
         asteroid_belt[i].rot_speed = 0.2f + ((float)rand() / (float)RAND_MAX) * 0.8f;
         asteroid_belt[i].rot_axis_x = ((float)rand() / (float)RAND_MAX);
         asteroid_belt[i].rot_axis_y = ((float)rand() / (float)RAND_MAX);
         asteroid_belt[i].rot_axis_z = ((float)rand() / (float)RAND_MAX);
 
-        // Szín: szürke, barnás, vöröses
+        // Color: grey, brownish, reddish
         float base = 0.35f + ((float)rand() / (float)RAND_MAX) * 0.3f;
         int color_type = rand() % 3;
         if (color_type == 0) {
-            // szürke
+            // grey
             asteroid_belt[i].color_r = base;
             asteroid_belt[i].color_g = base;
             asteroid_belt[i].color_b = base;
         } else if (color_type == 1) {
-            // barnás
+            // brownish
             asteroid_belt[i].color_r = base + 0.15f;
             asteroid_belt[i].color_g = base * 0.8f;
             asteroid_belt[i].color_b = base * 0.6f;
         } else {
-            // vöröses
+            // reddish
             asteroid_belt[i].color_r = base + 0.2f;
             asteroid_belt[i].color_g = base * 0.6f;
             asteroid_belt[i].color_b = base * 0.5f;
         }
 
-        // Ellipszis
+        // Elliptical orbit
         asteroid_belt[i].orbit_eccentricity = 0.8f + ((float)rand() / (float)RAND_MAX) * 0.4f;
     }
 }
@@ -265,13 +265,13 @@ void draw_asteroid_belt() {
 
         glTranslatef(x, asteroid_belt[i].y, z);
 
-        // Saját forgás
+        // Self-rotation
         glRotatef(asteroid_belt[i].rot_angle,
                   asteroid_belt[i].rot_axis_x,
                   asteroid_belt[i].rot_axis_y,
                   asteroid_belt[i].rot_axis_z);
 
-        // Lapított alak
+        // Flattened shape
         glScalef(asteroid_belt[i].scale_x,
                  asteroid_belt[i].scale_y,
                  asteroid_belt[i].scale_z);
@@ -290,12 +290,12 @@ void draw_asteroid_belt() {
     }
 }
 
-// távolság kiszámítása két pont között.
+// Calculate distance between two 3D points
 float dist3D(float x1, float y1, float z1, float x2, float y2, float z2) {
     return sqrtf(powf(x2 - x1, 2) + powf(y2 - y1, 2) + powf(z2 - z1, 2));
 }
 
-// sugár-gömb metszés ellenörzése
+// Ray-sphere intersection test
 bool ray_sphere_intersection(Vec3 origin, Vec3 dir, Vec3 sphere_pos, float radius) {
     Vec3 oc = {origin.x - sphere_pos.x, origin.y - sphere_pos.y, origin.z - sphere_pos.z};
     float b = 2.0f * (oc.x * dir.x + oc.y * dir.y + oc.z * dir.z);
@@ -305,7 +305,7 @@ bool ray_sphere_intersection(Vec3 origin, Vec3 dir, Vec3 sphere_pos, float radiu
 }
 
 void pick_planet(int mouseX, int mouseY, void* cam_ptr, void* world_ptr) {
-    // Visszaalakítjuk a mutatókat a rendes típusukra
+    // Cast void pointers back to their concrete types
     Camera* cam = (Camera*)cam_ptr;
     World* world = (World*)world_ptr;
 
@@ -336,10 +336,10 @@ void pick_planet(int mouseX, int mouseY, void* cam_ptr, void* world_ptr) {
 
     for (int i = 0; i < world->count; i++) {
         Vec3 planet_pos = { world->planets[i].world_x, world->planets[i].world_y, world->planets[i].world_z };
-        // A méretet kicsit megnöveljük (1.5x), hogy könnyebb legyen eltalálni
+        // Inflate radius by 1.5x to make picking easier
         if (ray_sphere_intersection(ray_origin, ray_dir, planet_pos, world->planets[i].size * 1.5f)) {
             selected_planet_index = i;
-            printf("Bolygo kivalasztva: %s\n", world->planets[i].name);
+            printf("Planet selected: %s\n", world->planets[i].name);
             break;
         }
     }

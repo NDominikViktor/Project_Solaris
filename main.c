@@ -58,9 +58,9 @@ void draw_text_simple(float x, float y, const char* text) {
     for (int i = 0; text[i] != '\0'; i++) {
         float ox = i * 12.0f;
         char c = text[i];
-        if (c >= 'a' && c <= 'z') c -= 32; // Kisbetűből nagybetűt csinálunk
+        if (c >= 'a' && c <= 'z') c -= 32; // Convert lowercase to uppercase
 
-        // --- BETŰK (A-Z) ---
+        // --- LETTERS (A-Z) ---
         if (c == 'A') { glVertex2f(ox,10); glVertex2f(ox+4,0); glVertex2f(ox+4,0); glVertex2f(ox+8,10); glVertex2f(ox+2,5); glVertex2f(ox+6,5); }
         else if (c == 'B') { glVertex2f(ox,0); glVertex2f(ox,10); glVertex2f(ox,0); glVertex2f(ox+6,2); glVertex2f(ox+6,2); glVertex2f(ox,5); glVertex2f(ox,5); glVertex2f(ox+7,7); glVertex2f(ox+7,7); glVertex2f(ox,10); }
         else if (c == 'C') { glVertex2f(ox+8,2); glVertex2f(ox+4,0); glVertex2f(ox+4,0); glVertex2f(ox,4); glVertex2f(ox,4); glVertex2f(ox,6); glVertex2f(ox,6); glVertex2f(ox+4,10); glVertex2f(ox+4,10); glVertex2f(ox+8,8); }
@@ -88,7 +88,7 @@ void draw_text_simple(float x, float y, const char* text) {
         else if (c == 'Y') { glVertex2f(ox,0); glVertex2f(ox+4,5); glVertex2f(ox+8,0); glVertex2f(ox+4,5); glVertex2f(ox+4,5); glVertex2f(ox+4,10); }
         else if (c == 'Z') { glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox,10); glVertex2f(ox,10); glVertex2f(ox+8,10); }
 
-        // --- SZÁMOK (0-9) ---
+        // --- DIGITS (0-9) ---
         else if (c == '0') { glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox+8,10); glVertex2f(ox+8,10); glVertex2f(ox,10); glVertex2f(ox,10); glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox,10); }
         else if (c == '1') { glVertex2f(ox+4,0); glVertex2f(ox+4,10); glVertex2f(ox,2); glVertex2f(ox+4,0); }
         else if (c == '2') { glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox+8,5); glVertex2f(ox+8,5); glVertex2f(ox,5); glVertex2f(ox,5); glVertex2f(ox,10); glVertex2f(ox,10); glVertex2f(ox+8,10); }
@@ -100,7 +100,7 @@ void draw_text_simple(float x, float y, const char* text) {
         else if (c == '8') { glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox+8,10); glVertex2f(ox+8,10); glVertex2f(ox,10); glVertex2f(ox,10); glVertex2f(ox,0); glVertex2f(ox,5); glVertex2f(ox+8,5); }
         else if (c == '9') { glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox+8,10); glVertex2f(ox,5); glVertex2f(ox+8,5); glVertex2f(ox,0); glVertex2f(ox,5); }
 
-        // --- ÍRÁSJELEK ---
+        // --- PUNCTUATION ---
         else if (c == '.') { glVertex2f(ox+3, 9); glVertex2f(ox+5, 9); glVertex2f(ox+3, 10); glVertex2f(ox+5, 10); }
         else if (c == ':') { glVertex2f(ox+4, 2); glVertex2f(ox+4, 3); glVertex2f(ox+4, 7); glVertex2f(ox+4, 8); }
         else if (c == '-') { glVertex2f(ox+2, 5); glVertex2f(ox+6, 5); }
@@ -111,7 +111,7 @@ void draw_text_simple(float x, float y, const char* text) {
 }
 
 void draw_hud(int target_index, float intensity, World* w, int scr_w, int scr_h) {
-    // Állapotok mentése, hogy a HUD ne rontsa el a 3D renderelést
+    // Save state so the HUD does not interfere with 3D rendering
     GLboolean lighting_was_on = glIsEnabled(GL_LIGHTING);
     GLboolean cull_face_was_on = glIsEnabled(GL_CULL_FACE);
 
@@ -129,7 +129,7 @@ void draw_hud(int target_index, float intensity, World* w, int scr_w, int scr_h)
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    // --- 1. INTENZITÁS SÁV (Bal alsó sarok - Fényerő) ---
+    // --- 1. INTENSITY BAR (bottom-left - brightness) ---
     glColor4f(1.0f, 1.0f, 1.0f, 0.2f);
     glBegin(GL_QUADS);
         glVertex2f(20, scr_h - 50);
@@ -147,12 +147,12 @@ void draw_hud(int target_index, float intensity, World* w, int scr_w, int scr_h)
         glVertex2f(20, scr_h - 20);
     glEnd();
 
-    // --- 2. BOLYGÓ INFO PANEL (Jobb felső sarok) ---
-    // Csak akkor rajzoljuk, ha van kijelölt bolygó
+    // --- 2. PLANET INFO PANEL (top-right) ---
+    // Only draw when a planet is selected
     if (target_index != -1 && target_index < w->count) {
         Planet* p = &w->planets[target_index];
 
-        // Panel háttér (sötétkék, áttetsző)
+        // Panel background (dark blue, translucent)
         glColor4f(0.0f, 0.1f, 0.2f, 0.7f);
         glBegin(GL_QUADS);
             glVertex2f(scr_w - 280, 20);
@@ -161,7 +161,7 @@ void draw_hud(int target_index, float intensity, World* w, int scr_w, int scr_h)
             glVertex2f(scr_w - 280, 160);
         glEnd();
 
-        // Panel keret (neon kék)
+        // Panel border (bright blue)
         glColor4f(0.0f, 0.8f, 1.0f, 1.0f);
         glBegin(GL_LINE_LOOP);
             glVertex2f(scr_w - 280, 20);
@@ -170,27 +170,27 @@ void draw_hud(int target_index, float intensity, World* w, int scr_w, int scr_h)
             glVertex2f(scr_w - 280, 160);
         glEnd();
 
-        // Szöveges adatok kiírása a draw_text_simple segítségével
+        // Render text fields
         char buffer[64];
 
-        // Név kiírása (Fehérrel)
+        // Planet name (white)
         glColor3f(1.0f, 1.0f, 1.0f);
         draw_text_simple(scr_w - 260, 40, p->name);
 
-        // Távolság
-        sprintf(buffer, "TAV: %.1f", p->distance);
+        // Distance
+        sprintf(buffer, "DIST: %.1f", p->distance);
         draw_text_simple(scr_w - 260, 75, buffer);
 
-        // Méret
-        sprintf(buffer, "MERET: %.2f", p->size);
+        // Size
+        sprintf(buffer, "SIZE: %.2f", p->size);
         draw_text_simple(scr_w - 260, 110, buffer);
 
-        // Keringési sebesség (opcionális extra)
-        sprintf(buffer, "SEB: %.3f", p->orbit_speed);
+        // Orbital speed
+        sprintf(buffer, "SPD: %.3f", p->orbit_speed);
         draw_text_simple(scr_w - 260, 140, buffer);
     }
 
-    // --- 3. HELP IKON / KERET (Bal felső sarok) ---
+    // --- 3. HELP ICON (top-left) ---
     if (!show_help) {
         glColor4f(0.0f, 0.8f, 1.0f, 0.5f);
         glBegin(GL_LINE_LOOP);
@@ -199,12 +199,12 @@ void draw_hud(int target_index, float intensity, World* w, int scr_w, int scr_h)
         glEnd();
 
         glBegin(GL_LINES);
-            glVertex2f(60, 30); glVertex2f(60, 32); // 'i' pontja
-            glVertex2f(60, 37); glVertex2f(60, 45); // 'i' szára
+            glVertex2f(60, 30); glVertex2f(60, 32); // dot of 'i'
+            glVertex2f(60, 37); glVertex2f(60, 45); // stem of 'i'
         glEnd();
     }
 
-    // Visszaállítjuk az eredeti állapotokat
+    // Restore original GL state
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
 
@@ -222,19 +222,19 @@ void draw_sun_glow(float size, float r, float g, float b) {
     glDisable(GL_LIGHTING);
     glDisable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE); // Izzó hatás
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE); // Glow blend
     glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
 
     int layers = 8;
     for (int i = 1; i <= layers; i++) {
-        // Kifelé növő körök, de sokkal gyorsabban csökkenő átlátszóság
+        // Expanding rings with fast alpha falloff
         float current_size = size * (1.0f + (float)i * 0.25f);
         float alpha = 0.12f * (1.0f - (float)i / layers);
 
         glColor4f(r, g, b, alpha);
 
-        // Billboard mátrix: hogy mindig felénk nézzen
+        // Billboard matrix: always face the camera
         float mv[16];
         glGetFloatv(GL_MODELVIEW_MATRIX, mv);
         for(int k=0; k<3; k++) for(int j=0; j<3; j++) {
@@ -244,7 +244,7 @@ void draw_sun_glow(float size, float r, float g, float b) {
 
         glBegin(GL_TRIANGLE_FAN);
         glVertex3f(0, 0, 0);
-        // 2 fokonként rajzolunk (180 pont egy körhöz), ettől lesz sima a széle
+        // Step 2 degrees (180 points) for a smooth circle
         for (int angle = 0; angle <= 360; angle += 2) {
             float rad = angle * 3.14159f / 180.0f;
             glVertex3f(cosf(rad) * current_size, sinf(rad) * current_size, 0);
@@ -281,14 +281,14 @@ typedef struct {
     float speed;
 } Comet;
 
-// Globális példányok
+// Global instances
 OBJModel comet_model = {NULL, NULL, 0, 0, 0};
-Comet halley = {0, 0, 0, 0, 0.0009f}; // Ez oldja meg a "halley undeclared" hibát
+Comet halley = {0, 0, 0, 0, 0.0009f}; // forward declaration
 
 void load_asteroid_obj(const char* filename, OBJModel* model) {
     FILE* file = fopen(filename, "r");
     if (!file) {
-        printf("HIBA: Nem talalhato a fajl: %s\n", filename);
+        printf("Error: file not found: %s\n", filename);
         model->initialized = 0;
         return;
     }
@@ -297,18 +297,18 @@ void load_asteroid_obj(const char* filename, OBJModel* model) {
     model->vertex_count = 0;
     model->face_count = 0;
 
-    // 1. Kör: Megszámoljuk az adatokat
+    // Pass 1: count vertices and faces
     while (fgets(line, sizeof(line), file)) {
         if (line[0] == 'v' && line[1] == ' ') model->vertex_count++;
         if (line[0] == 'f' && line[1] == ' ') model->face_count++;
     }
 
-    // Memória foglalás
+    // Allocate memory
     model->vertices = (Vertex*)malloc(sizeof(Vertex) * model->vertex_count);
     model->faces = (Face*)malloc(sizeof(Face) * model->face_count);
 
     if (!model->vertices || !model->faces) {
-        printf("HIBA: Nincs eleg memoria az OBJ-nek!\n");
+        printf("Error: out of memory for OBJ model!\n");
         fclose(file);
         return;
     }
@@ -316,13 +316,13 @@ void load_asteroid_obj(const char* filename, OBJModel* model) {
     rewind(file);
 
     int v_idx = 0, f_idx = 0;
-    // 2. Kör: Beolvasás
+    // Pass 2: read data
     while (fgets(line, sizeof(line), file)) {
         if (line[0] == 'v' && line[1] == ' ') {
             sscanf(line, "v %f %f %f", &model->vertices[v_idx].x, &model->vertices[v_idx].y, &model->vertices[v_idx].z);
             v_idx++;
         } else if (line[0] == 'f' && line[1] == ' ') {
-            // Beolvassuk az indexeket (kezeljük a v/vt/vn formátumot is az atoi-val)
+            // Parse indices, handle v/vt/vn format via atoi
             char* p = line + 2;
             for (int i = 0; i < 3; i++) {
                 model->faces[f_idx].v[i] = atoi(p) - 1;
@@ -334,7 +334,7 @@ void load_asteroid_obj(const char* filename, OBJModel* model) {
     }
     fclose(file);
     model->initialized = 1;
-    printf("Siker: %s betoltve (%d vertex).\n", filename, model->vertex_count);
+    printf("Loaded: %s (%d vertices).\n", filename, model->vertex_count);
 }
 
 void draw_obj_model(OBJModel* model, float scale) {
@@ -362,18 +362,18 @@ void draw_comet(Comet* c, float delta_time) {
     glPushMatrix();
     glTranslatef(c->x, c->y, c->z);
 
-    // Szikla (OBJ)
+    // Rock core (OBJ model)
     glEnable(GL_LIGHTING);
     glColor3f(0.8f, 0.8f, 0.9f);
     draw_obj_model(&comet_model, 0.6f);
 
-    // Csóva (Rikító kék)
+    // Tail (bright blue)
     glDisable(GL_LIGHTING);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
     glColor4f(0.5f, 0.8f, 1.0f, 0.4f);
 
-    // Itt a korábban megírt glBegin(GL_TRIANGLES) csóva kódod helye...
+    // TODO: add comet tail geometry here (GL_TRIANGLES)
 
     glDisable(GL_BLEND);
     glPopMatrix();
@@ -479,14 +479,14 @@ int main(int argc, char* args[]) {
 
             if (event.type == SDL_MOUSEBUTTONDOWN) {
                 if (event.button.button == SDL_BUTTON_LEFT) {
-                    // Itt hívjuk meg a kijelölést
+                    // Trigger planet picking
                     pick_planet(event.button.x, event.button.y, &camera, &world);
-                    // Átadjuk a kijelölt indexet a HUD-nak is, ha akarjuk
+                    // Forward selected index to HUD
                     target_planet_index = selected_planet_index;
                 }
             }
 
-            // Kamera forgatása (csak ha a jobb gomb le van nyomva)
+            // Rotate camera (right mouse button held)
             if (event.type == SDL_MOUSEMOTION) {
                 if (SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
                     float sensitivity = 0.2f;
@@ -505,8 +505,8 @@ int main(int argc, char* args[]) {
 
                 if (event.key.keysym.sym == SDLK_f) {
                     fog_enabled = !fog_enabled;
-                    if (fog_enabled) { glEnable(GL_FOG);  printf("Kod: BE\n"); }
-                    else             { glDisable(GL_FOG); printf("Kod: KI\n"); }
+                    if (fog_enabled) { glEnable(GL_FOG);  printf("Fog: ON\n"); }
+                    else             { glDisable(GL_FOG); printf("Fog: OFF\n"); }
                 }
                 if (event.key.keysym.sym == SDLK_ESCAPE) running = false;
 
@@ -517,13 +517,6 @@ int main(int argc, char* args[]) {
                 if (event.key.keysym.sym == SDLK_0) target_planet_index = -1;
             }
 
-            if (event.type == SDL_MOUSEMOTION) {
-                float sensitivity = 0.1f;
-                camera.yaw   -= event.motion.xrel * sensitivity;
-                camera.pitch -= event.motion.yrel * sensitivity;
-                if (camera.pitch >  89.0f) camera.pitch =  89.0f;
-                if (camera.pitch < -89.0f) camera.pitch = -89.0f;
-            }
         }
 
         const Uint8* state = SDL_GetKeyboardState(NULL);
@@ -596,9 +589,9 @@ int main(int argc, char* args[]) {
             draw_skybox(skybox_texture_id);
         glPopMatrix();
 
-        glDisable(GL_LIGHTING); // Kikapcsoljuk a fényt, hogy a kövek saját színe látsszon
+        glDisable(GL_LIGHTING); // Disable lighting so asteroids show their own colour
         draw_asteroid_belt();
-        glEnable(GL_LIGHTING);  // Visszakapcsoljuk a bolygókhoz
+        glEnable(GL_LIGHTING);  // Re-enable lighting for planets
 
 
         // Update light each frame
@@ -663,7 +656,7 @@ int main(int argc, char* args[]) {
                 gluQuadricTexture(sunQuad, GL_TRUE);
                 gluSphere(sunQuad, current_sun_size, 32, 32);
                 gluDeleteQuadric(sunQuad);
-                // Nap glow - csak EGY finom réteg
+                // Sun glow - single soft layer
                 draw_sun_glow(current_sun_size * 1.5f, r, g, b);
                 glDisable(GL_LIGHTING);
                 glEnable(GL_BLEND);
@@ -733,7 +726,7 @@ int main(int argc, char* args[]) {
         halley.angle += 0.002f;
         if (halley.angle > 6.28f) halley.angle = 0;
 
-        // Rajzolás
+        // Draw comet
         draw_comet(&halley, delta_time);
 
         draw_hud(target_planet_index, sun_intensity, &world, win_w, win_h);

@@ -10,9 +10,9 @@
 void init_camera(Camera* camera) {
     camera->x = 0.0f;
     camera->y = 0.0f;
-    camera->z = 10.0f; // középonttól hátrébb állunk
+    camera->z = 10.0f; // start behind the origin
     camera->pitch = 0.0f;
-    camera->yaw = 0.0f; // felfele legyen a középpont
+    camera->yaw = 0.0f; // look toward the origin
 }
 
 void set_view(Camera* camera) {
@@ -30,19 +30,17 @@ void update_camera_position(Camera* camera, float dx, float dy, float dz, struct
     float newY = camera->y + dy;
     float newZ = camera->z + dz;
 
-    // Mivel fent include-oltuk a scene.h-t, itt a world->count már NEM lesz incomplete!
+    // scene.h is included above so World is a complete type here
     for (int i = 0; i < world->count; i++) {
         Planet* p = &world->planets[i];
 
-        float px = cosf(p->current_angle) * p->distance;
-        float pz = sinf(p->current_angle) * p->distance;
 
         float dist = sqrtf((newX - p->world_x) * (newX - p->world_x) +
                            (newY - p->world_y) * (newY - p->world_y) +
                            (newZ - p->world_z) * (newZ - p->world_z));
 
         if (dist < (p->size + 0.5f)) {
-            return; // Ütközés: nem frissítjük a pozíciót, kilépünk
+            return; // Collision detected: abort position update
         }
     }
 
