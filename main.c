@@ -32,10 +32,12 @@ GLuint sun_glow_texture_id;
 void draw_skybox(GLuint texture_id);
 void draw_atmosphere(float size, float r, float g, float b, float alpha);
 
-void setup_projection() {
+void setup_projection(int width, int height) {
+    if (height == 0) height = 1;
+    glViewport(0, 0, width, height);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    float aspect = (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT;
+    float aspect = (float)width / (float)height;
 
     float fov   = 45.0f;
     float zNear = 0.1f;
@@ -108,7 +110,7 @@ void draw_text_simple(float x, float y, const char* text) {
     glPopMatrix();
 }
 
-void draw_hud(int target_index, float intensity, World* w) {
+void draw_hud(int target_index, float intensity, World* w, int scr_w, int scr_h) {
     // Állapotok mentése, hogy a HUD ne rontsa el a 3D renderelést
     GLboolean lighting_was_on = glIsEnabled(GL_LIGHTING);
     GLboolean cull_face_was_on = glIsEnabled(GL_CULL_FACE);
@@ -116,7 +118,7 @@ void draw_hud(int target_index, float intensity, World* w) {
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
-    glOrtho(0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, -1, 1);
+    glOrtho(0, scr_w, scr_h, 0, -1, 1);
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
     glLoadIdentity();
@@ -130,19 +132,19 @@ void draw_hud(int target_index, float intensity, World* w) {
     // --- 1. INTENZITÁS SÁV (Bal alsó sarok - Fényerő) ---
     glColor4f(1.0f, 1.0f, 1.0f, 0.2f);
     glBegin(GL_QUADS);
-        glVertex2f(20, SCREEN_HEIGHT - 50);
-        glVertex2f(220, SCREEN_HEIGHT - 50);
-        glVertex2f(220, SCREEN_HEIGHT - 20);
-        glVertex2f(20, SCREEN_HEIGHT - 20);
+        glVertex2f(20, scr_h - 50);
+        glVertex2f(220, scr_h - 50);
+        glVertex2f(220, scr_h - 20);
+        glVertex2f(20, scr_h - 20);
     glEnd();
 
     float fill = ((intensity - 0.1f) / 1.9f) * 200.0f;
     glColor4f(1.0f, 0.7f, 0.0f, 0.8f);
     glBegin(GL_QUADS);
-        glVertex2f(20, SCREEN_HEIGHT - 50);
-        glVertex2f(20 + fill, SCREEN_HEIGHT - 50);
-        glVertex2f(20 + fill, SCREEN_HEIGHT - 20);
-        glVertex2f(20, SCREEN_HEIGHT - 20);
+        glVertex2f(20, scr_h - 50);
+        glVertex2f(20 + fill, scr_h - 50);
+        glVertex2f(20 + fill, scr_h - 20);
+        glVertex2f(20, scr_h - 20);
     glEnd();
 
     // --- 2. BOLYGÓ INFO PANEL (Jobb felső sarok) ---
@@ -153,19 +155,19 @@ void draw_hud(int target_index, float intensity, World* w) {
         // Panel háttér (sötétkék, áttetsző)
         glColor4f(0.0f, 0.1f, 0.2f, 0.7f);
         glBegin(GL_QUADS);
-            glVertex2f(SCREEN_WIDTH - 280, 20);
-            glVertex2f(SCREEN_WIDTH - 20, 20);
-            glVertex2f(SCREEN_WIDTH - 20, 160);
-            glVertex2f(SCREEN_WIDTH - 280, 160);
+            glVertex2f(scr_w - 280, 20);
+            glVertex2f(scr_w - 20, 20);
+            glVertex2f(scr_w - 20, 160);
+            glVertex2f(scr_w - 280, 160);
         glEnd();
 
         // Panel keret (neon kék)
         glColor4f(0.0f, 0.8f, 1.0f, 1.0f);
         glBegin(GL_LINE_LOOP);
-            glVertex2f(SCREEN_WIDTH - 280, 20);
-            glVertex2f(SCREEN_WIDTH - 20, 20);
-            glVertex2f(SCREEN_WIDTH - 20, 160);
-            glVertex2f(SCREEN_WIDTH - 280, 160);
+            glVertex2f(scr_w - 280, 20);
+            glVertex2f(scr_w - 20, 20);
+            glVertex2f(scr_w - 20, 160);
+            glVertex2f(scr_w - 280, 160);
         glEnd();
 
         // Szöveges adatok kiírása a draw_text_simple segítségével
@@ -173,19 +175,19 @@ void draw_hud(int target_index, float intensity, World* w) {
 
         // Név kiírása (Fehérrel)
         glColor3f(1.0f, 1.0f, 1.0f);
-        draw_text_simple(SCREEN_WIDTH - 260, 40, p->name);
+        draw_text_simple(scr_w - 260, 40, p->name);
 
         // Távolság
         sprintf(buffer, "TAV: %.1f", p->distance);
-        draw_text_simple(SCREEN_WIDTH - 260, 75, buffer);
+        draw_text_simple(scr_w - 260, 75, buffer);
 
         // Méret
         sprintf(buffer, "MERET: %.2f", p->size);
-        draw_text_simple(SCREEN_WIDTH - 260, 110, buffer);
+        draw_text_simple(scr_w - 260, 110, buffer);
 
         // Keringési sebesség (opcionális extra)
         sprintf(buffer, "SEB: %.3f", p->orbit_speed);
-        draw_text_simple(SCREEN_WIDTH - 260, 140, buffer);
+        draw_text_simple(scr_w - 260, 140, buffer);
     }
 
     // --- 3. HELP IKON / KERET (Bal felső sarok) ---
@@ -415,7 +417,8 @@ int main(int argc, char* args[]) {
     Camera camera;
     init_camera(&camera);
 
-    setup_projection();
+    int win_w = SCREEN_WIDTH, win_h = SCREEN_HEIGHT;
+    setup_projection(win_w, win_h);
     load_planets(&world, "assets/planets.csv");
     printf("Planet count: %d\n", world.count);
 
@@ -466,6 +469,13 @@ int main(int argc, char* args[]) {
 
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) running = false;
+
+            if (event.type == SDL_WINDOWEVENT &&
+                event.window.event == SDL_WINDOWEVENT_RESIZED) {
+                win_w = event.window.data1;
+                win_h = event.window.data2;
+                setup_projection(win_w, win_h);
+            }
 
             if (event.type == SDL_MOUSEBUTTONDOWN) {
                 if (event.button.button == SDL_BUTTON_LEFT) {
@@ -726,13 +736,13 @@ int main(int argc, char* args[]) {
         // Rajzolás
         draw_comet(&halley, delta_time);
 
-        draw_hud(target_planet_index, sun_intensity, &world);
+        draw_hud(target_planet_index, sun_intensity, &world, win_w, win_h);
         // Help overlay
         if (show_help) {
             glMatrixMode(GL_PROJECTION);
             glPushMatrix();
             glLoadIdentity();
-            glOrtho(0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, -1, 1);
+            glOrtho(0, win_w, win_h, 0, -1, 1);
 
             glMatrixMode(GL_MODELVIEW);
             glPushMatrix();
@@ -749,9 +759,9 @@ int main(int argc, char* args[]) {
 
             glBegin(GL_QUADS);
             glTexCoord2f(0, 0); glVertex2f(100, 100);
-            glTexCoord2f(1, 0); glVertex2f(SCREEN_WIDTH - 100, 100);
-            glTexCoord2f(1, 1); glVertex2f(SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
-            glTexCoord2f(0, 1); glVertex2f(100, SCREEN_HEIGHT - 100);
+            glTexCoord2f(1, 0); glVertex2f(win_w - 100, 100);
+            glTexCoord2f(1, 1); glVertex2f(win_w - 100, win_h - 100);
+            glTexCoord2f(0, 1); glVertex2f(100, win_h - 100);
             glEnd();
 
             glDisable(GL_BLEND);
