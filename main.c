@@ -11,24 +11,10 @@
 
 
 
-World world;
-
-const int SCREEN_WIDTH = 1280;
+const int SCREEN_WIDTH  = 1280;
 const int SCREEN_HEIGHT = 720;
 
-float sun_intensity = 1.0f;
-
-bool show_help = false;
-GLuint help_texture_id;
-GLuint skybox_texture_id;
-
-int selected_planet_index = 0;
-
-
-
-
 GLuint load_texture(const char* filename);
-GLuint sun_glow_texture_id;
 void draw_skybox(GLuint texture_id);
 void draw_atmosphere(float size, float r, float g, float b, float alpha);
 
@@ -110,7 +96,7 @@ void draw_text_simple(float x, float y, const char* text) {
     glPopMatrix();
 }
 
-void draw_hud(int target_index, float intensity, World* w, int scr_w, int scr_h) {
+void draw_hud(int target_index, float intensity, World* w, int scr_w, int scr_h, bool help_visible) {
     // Save state so the HUD does not interfere with 3D rendering
     GLboolean lighting_was_on = glIsEnabled(GL_LIGHTING);
     GLboolean cull_face_was_on = glIsEnabled(GL_CULL_FACE);
@@ -191,7 +177,7 @@ void draw_hud(int target_index, float intensity, World* w, int scr_w, int scr_h)
     }
 
     // --- 3. HELP ICON (top-left) ---
-    if (!show_help) {
+    if (!help_visible) {
         glColor4f(0.0f, 0.8f, 1.0f, 0.5f);
         glBegin(GL_LINE_LOOP);
             glVertex2f(20, 20); glVertex2f(100, 20);
@@ -282,8 +268,6 @@ typedef struct {
 } Comet;
 
 // Global instances
-OBJModel comet_model = {NULL, NULL, 0, 0, 0};
-Comet halley = {0, 0, 0, 0, 0.0009f}; // forward declaration
 
 void load_asteroid_obj(const char* filename, OBJModel* model) {
     FILE* file = fopen(filename, "r");
@@ -353,7 +337,7 @@ void draw_obj_model(OBJModel* model, float scale) {
     glPopMatrix();
 }
 
-void draw_comet(Comet* c, float delta_time) {
+void draw_comet(Comet* c, float delta_time, OBJModel* model) {
     c->angle += c->speed * delta_time;
     c->x = cosf(c->angle) * 40.0f;
     c->z = sinf(c->angle) * 15.0f;
@@ -365,7 +349,7 @@ void draw_comet(Comet* c, float delta_time) {
     // Rock core (OBJ model)
     glEnable(GL_LIGHTING);
     glColor3f(0.8f, 0.8f, 0.9f);
-    draw_obj_model(&comet_model, 0.6f);
+    draw_obj_model(model, 0.6f);
 
     // Tail (bright blue)
     glDisable(GL_LIGHTING);
@@ -414,6 +398,16 @@ int main(int argc, char* args[]) {
     bool fog_enabled = true;
     SDL_Event event;
 
+    World world;
+    float sun_intensity         = 1.0f;
+    bool  show_help             = false;
+    GLuint help_texture_id      = 0;
+    GLuint skybox_texture_id    = 0;
+    GLuint sun_glow_texture_id  = 0;
+    OBJModel comet_model        = {NULL, NULL, 0, 0, 0};
+    Comet halley                = {0, 0, 0, 0, 0.0009f};
+    Asteroid asteroid_belt[MAX_ASTEROID];
+
     Camera camera;
     init_camera(&camera);
 
@@ -422,7 +416,7 @@ int main(int argc, char* args[]) {
     load_planets(&world, "assets/planets.csv");
     printf("Planet count: %d\n", world.count);
 
-    init_asteroid_belt();
+    init_asteroid_belt(asteroid_belt);
 /*
     halley.angle = 0;
     halley.speed = 0.5;
@@ -480,9 +474,9 @@ int main(int argc, char* args[]) {
             if (event.type == SDL_MOUSEBUTTONDOWN) {
                 if (event.button.button == SDL_BUTTON_LEFT) {
                     // Trigger planet picking
-                    pick_planet(event.button.x, event.button.y, &camera, &world);
-                    // Forward selected index to HUD
-                    target_planet_index = selected_planet_index;
+                    int hit = pick_planet(event.button.x, event.button.y, &camera, &world);
+                    if (hit != -1)
+                        target_planet_index = hit;
                 }
             }
 
@@ -590,7 +584,7 @@ int main(int argc, char* args[]) {
         glPopMatrix();
 
         glDisable(GL_LIGHTING); // Disable lighting so asteroids show their own colour
-        draw_asteroid_belt();
+        draw_asteroid_belt(asteroid_belt);
         glEnable(GL_LIGHTING);  // Re-enable lighting for planets
 
 
@@ -727,9 +721,9 @@ int main(int argc, char* args[]) {
         if (halley.angle > 6.28f) halley.angle = 0;
 
         // Draw comet
-        draw_comet(&halley, delta_time);
+        draw_comet(&halley, delta_time, &comet_model);
 
-        draw_hud(target_planet_index, sun_intensity, &world, win_w, win_h);
+        draw_hud(target_planet_index, sun_intensity, &world, win_w, win_h, show_help);
         // Help overlay
         if (show_help) {
             glMatrixMode(GL_PROJECTION);

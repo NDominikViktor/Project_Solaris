@@ -207,9 +207,7 @@ void draw_ring_particles(Planet* p) {
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
-Asteroid asteroid_belt[MAX_ASTEROID];
-
-void init_asteroid_belt() {
+void init_asteroid_belt(Asteroid* asteroid_belt) {
     for (int i = 0; i < MAX_ASTEROID; i++) {
         float r = 14.5f + ((float)rand() / (float)RAND_MAX) * 4.5f;
         asteroid_belt[i].distance = r;
@@ -255,7 +253,7 @@ void init_asteroid_belt() {
     }
 }
 
-void draw_asteroid_belt() {
+void draw_asteroid_belt(Asteroid* asteroid_belt) {
     for (int i = 0; i < MAX_ASTEROID; i++) {
         glPushMatrix();
 
@@ -304,7 +302,7 @@ bool ray_sphere_intersection(Vec3 origin, Vec3 dir, Vec3 sphere_pos, float radiu
     return (discriminant > 0);
 }
 
-void pick_planet(int mouseX, int mouseY, void* cam_ptr, void* world_ptr) {
+int pick_planet(int mouseX, int mouseY, void* cam_ptr, void* world_ptr) {
     // Cast void pointers back to their concrete types
     Camera* cam = (Camera*)cam_ptr;
     World* world = (World*)world_ptr;
@@ -332,15 +330,14 @@ void pick_planet(int mouseX, int mouseY, void* cam_ptr, void* world_ptr) {
         ray_dir.x /= len; ray_dir.y /= len; ray_dir.z /= len;
     }
 
-    extern int selected_planet_index;
 
     for (int i = 0; i < world->count; i++) {
         Vec3 planet_pos = { world->planets[i].world_x, world->planets[i].world_y, world->planets[i].world_z };
         // Inflate radius by 1.5x to make picking easier
         if (ray_sphere_intersection(ray_origin, ray_dir, planet_pos, world->planets[i].size * 1.5f)) {
-            selected_planet_index = i;
-            printf("Planet selected: %s\n", world->planets[i].name);
-            break;
+            printf("Planet selected: %s", world->planets[i].name);
+            return i;
         }
     }
+    return -1;
 }

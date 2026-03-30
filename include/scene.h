@@ -47,7 +47,7 @@ typedef struct World {
 
 /** @brief One asteroid in the belt. */
 typedef struct {
-    float x, y, z;              /**< World-space position (computed each frame). */
+    float x, y, z;              /**< World-space position; y is the vertical offset from the ecliptic. */
     float size;                  /**< Sphere radius. */
     float angle;                 /**< Current orbital angle in degrees. */
     float distance;              /**< Orbital radius from the Sun. */
@@ -58,7 +58,6 @@ typedef struct {
     float rot_axis_x, rot_axis_y, rot_axis_z; /**< Self-rotation axis (unit vector). */
     float color_r, color_g, color_b;           /**< Surface colour (RGB, 0-1). */
     float orbit_eccentricity;    /**< Scales the Z radius to create an elliptical orbit. */
-    float y;                     /**< Vertical offset from the ecliptic plane. */
 } Asteroid;
 
 /** @brief A generic 3D vector used for ray casting. */
@@ -67,7 +66,6 @@ typedef struct {
 } Vec3;
 
 #define MAX_ASTEROID 500
-extern Asteroid asteroid_belt[MAX_ASTEROID]; /**< Global asteroid belt array. */
 
 /**
  * @brief Load planet definitions from a CSV file into the World.
@@ -98,14 +96,13 @@ void draw_ring_particles(Planet* p);
 /**
  * @brief Select a planet by casting a ray through the given screen pixel.
  *
- * Updates the global selected_planet_index when a hit is found.
- *
- * @param mouseX   Screen X coordinate of the click.
- * @param mouseY   Screen Y coordinate of the click.
- * @param cam_ptr  Pointer to the active Camera (passed as void* to avoid circular include).
+ * @param mouseX    Screen X coordinate of the click.
+ * @param mouseY    Screen Y coordinate of the click.
+ * @param cam_ptr   Pointer to the active Camera (passed as void* to avoid circular include).
  * @param world_ptr Pointer to the World (passed as void*).
+ * @return Index of the hit planet in World.planets, or -1 if nothing was hit.
  */
-void pick_planet(int mouseX, int mouseY, void* cam_ptr, void* world_ptr);
+int pick_planet(int mouseX, int mouseY, void* cam_ptr, void* world_ptr);
 
 /**
  * @brief Test whether a ray intersects a sphere.
@@ -117,10 +114,16 @@ void pick_planet(int mouseX, int mouseY, void* cam_ptr, void* world_ptr);
  */
 bool ray_sphere_intersection(Vec3 origin, Vec3 dir, Vec3 sphere_pos, float radius);
 
-/** @brief Randomise and initialise all asteroids in asteroid_belt[]. */
-void init_asteroid_belt(void);
+/**
+ * @brief Randomise and initialise all asteroids in the belt array.
+ * @param asteroid_belt Pointer to an array of MAX_ASTEROID Asteroid elements.
+ */
+void init_asteroid_belt(Asteroid* asteroid_belt);
 
-/** @brief Animate and draw all asteroids in asteroid_belt[]. */
-void draw_asteroid_belt(void);
+/**
+ * @brief Animate and draw all asteroids in the belt array.
+ * @param asteroid_belt Pointer to an array of MAX_ASTEROID Asteroid elements.
+ */
+void draw_asteroid_belt(Asteroid* asteroid_belt);
 
 #endif /* SCENE_H */
