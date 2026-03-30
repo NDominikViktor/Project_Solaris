@@ -1,12 +1,9 @@
 CC      = gcc
 CFLAGS  = -std=c11 -Wall -Wextra -Iinclude \
            $(shell sdl2-config --cflags)
-LDFLAGS = $(shell sdl2-config --libs) -lSDL2_image -lopengl32 -lglu32
+LDFLAGS = $(shell sdl2-config --libs) -lSDL2_image -lSDL2_ttf -lopengl32 -lglu32
 
-# On Linux replace the two lines above with:
-# LDFLAGS = $(shell sdl2-config --libs) -lSDL2_image -lGL -lGLU -lm
-
-SRCS    = main.c src/camera.c src/scene.c
+SRCS    = main.c src/camera.c src/scene.c src/ui.c
 TARGET  = Solaris
 
 .PHONY: all clean

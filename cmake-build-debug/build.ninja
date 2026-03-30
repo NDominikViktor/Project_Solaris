@@ -73,6 +73,14 @@ build CMakeFiles/Solaris.dir/src/scene.c.obj: C_COMPILER__Solaris_unscanned_Debu
   OBJECT_DIR = CMakeFiles\Solaris.dir
   OBJECT_FILE_DIR = CMakeFiles\Solaris.dir\src
 
+build CMakeFiles/Solaris.dir/src/ui.c.obj: C_COMPILER__Solaris_unscanned_Debug C$:/Users/novak/Desktop/Fejlesztes/Solaris/src/ui.c || cmake_object_order_depends_target_Solaris
+  CONFIG = Debug
+  DEP_FILE = CMakeFiles\Solaris.dir\src\ui.c.obj.d
+  FLAGS = -g -std=gnu11 -fdiagnostics-color=always
+  INCLUDES = -IC:/Users/novak/Desktop/Fejlesztes/Solaris/include
+  OBJECT_DIR = CMakeFiles\Solaris.dir
+  OBJECT_FILE_DIR = CMakeFiles\Solaris.dir\src
+
 
 # =============================================================================
 # Link build statements for EXECUTABLE target Solaris
@@ -81,7 +89,7 @@ build CMakeFiles/Solaris.dir/src/scene.c.obj: C_COMPILER__Solaris_unscanned_Debu
 #############################################
 # Link the executable Solaris.exe
 
-build Solaris.exe: C_EXECUTABLE_LINKER__Solaris_Debug CMakeFiles/Solaris.dir/main.c.obj CMakeFiles/Solaris.dir/src/camera.c.obj CMakeFiles/Solaris.dir/src/scene.c.obj
+build Solaris.exe: C_EXECUTABLE_LINKER__Solaris_Debug CMakeFiles/Solaris.dir/main.c.obj CMakeFiles/Solaris.dir/src/camera.c.obj CMakeFiles/Solaris.dir/src/scene.c.obj CMakeFiles/Solaris.dir/src/ui.c.obj
   CONFIG = Debug
   FLAGS = -g
   LINK_LIBRARIES = -lmingw32  -lSDL2main  -lSDL2  -lopengl32  -lglu32  -lSDL2_image  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32

@@ -16,5 +16,11 @@
   "command": "C:\\Users\\novak\\Desktop\\Fejlesztes\\c_sdk_220203\\MinGW\\bin\\gcc.exe -IC:/Users/novak/Desktop/Fejlesztes/Solaris/include -g -std=gnu11 -fdiagnostics-color=always -o CMakeFiles\\Solaris.dir\\src\\scene.c.obj -c C:\\Users\\novak\\Desktop\\Fejlesztes\\Solaris\\src\\scene.c",
   "file": "C:/Users/novak/Desktop/Fejlesztes/Solaris/src/scene.c",
   "output": "C:/Users/novak/Desktop/Fejlesztes/Solaris/cmake-build-debug/CMakeFiles/Solaris.dir/src/scene.c.obj"
+},
+{
+  "directory": "C:/Users/novak/Desktop/Fejlesztes/Solaris/cmake-build-debug",
+  "command": "C:\\Users\\novak\\Desktop\\Fejlesztes\\c_sdk_220203\\MinGW\\bin\\gcc.exe -IC:/Users/novak/Desktop/Fejlesztes/Solaris/include -g -std=gnu11 -fdiagnostics-color=always -o CMakeFiles\\Solaris.dir\\src\\ui.c.obj -c C:\\Users\\novak\\Desktop\\Fejlesztes\\Solaris\\src\\ui.c",
+  "file": "C:/Users/novak/Desktop/Fejlesztes/Solaris/src/ui.c",
+  "output": "C:/Users/novak/Desktop/Fejlesztes/Solaris/cmake-build-debug/CMakeFiles/Solaris.dir/src/ui.c.obj"
 }
 ]
