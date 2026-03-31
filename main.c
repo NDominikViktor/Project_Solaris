@@ -10,27 +10,42 @@
 #include <stdlib.h>
 #include "ui.h"
 
-
 const int SCREEN_WIDTH  = 1280;
 const int SCREEN_HEIGHT = 720;
+
+// Must match PANEL_W defined in ui.c
+#define PANEL_W 340
 
 GLuint load_texture(const char* filename);
 void draw_skybox(GLuint texture_id);
 void draw_atmosphere(float size, float r, float g, float b, float alpha);
 
+// Full-window projection (simulation)
 void setup_projection(int width, int height) {
     if (height == 0) height = 1;
     glViewport(0, 0, width, height);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     float aspect = (float)width / (float)height;
+    float fov    = 45.0f, zNear = 0.1f, zFar = 1000.0f;
+    float fH     = tanf(fov / 360.0f * 3.14159f) * zNear;
+    float fW     = fH * aspect;
+    glFrustum(-fW, fW, -fH, fH, zNear, zFar);
+    glMatrixMode(GL_MODELVIEW);
+}
 
-    float fov   = 45.0f;
-    float zNear = 0.1f;
-    float zFar  = 1000.0f;
-    float fH    = tanf(fov / 360.0f * 3.14159f) * zNear;
-    float fW    = fH * aspect;
-
+// Editor: 3D viewport starts after the side panel
+void setup_projection_editor(int win_w, int win_h) {
+    if (win_h == 0) win_h = 1;
+    int vw = win_w - PANEL_W;
+    if (vw < 1) vw = 1;
+    glViewport(PANEL_W, 0, vw, win_h);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    float aspect = (float)vw / (float)win_h;
+    float fov    = 45.0f, zNear = 0.1f, zFar = 1000.0f;
+    float fH     = tanf(fov / 360.0f * 3.14159f) * zNear;
+    float fW     = fH * aspect;
     glFrustum(-fW, fW, -fH, fH, zNear, zFar);
     glMatrixMode(GL_MODELVIEW);
 }
@@ -44,9 +59,8 @@ void draw_text_simple(float x, float y, const char* text) {
     for (int i = 0; text[i] != '\0'; i++) {
         float ox = i * 12.0f;
         char c = text[i];
-        if (c >= 'a' && c <= 'z') c -= 32; // Convert lowercase to uppercase
+        if (c >= 'a' && c <= 'z') c -= 32;
 
-        // --- LETTERS (A-Z) ---
         if (c == 'A') { glVertex2f(ox,10); glVertex2f(ox+4,0); glVertex2f(ox+4,0); glVertex2f(ox+8,10); glVertex2f(ox+2,5); glVertex2f(ox+6,5); }
         else if (c == 'B') { glVertex2f(ox,0); glVertex2f(ox,10); glVertex2f(ox,0); glVertex2f(ox+6,2); glVertex2f(ox+6,2); glVertex2f(ox,5); glVertex2f(ox,5); glVertex2f(ox+7,7); glVertex2f(ox+7,7); glVertex2f(ox,10); }
         else if (c == 'C') { glVertex2f(ox+8,2); glVertex2f(ox+4,0); glVertex2f(ox+4,0); glVertex2f(ox,4); glVertex2f(ox,4); glVertex2f(ox,6); glVertex2f(ox,6); glVertex2f(ox+4,10); glVertex2f(ox+4,10); glVertex2f(ox+8,8); }
@@ -73,8 +87,6 @@ void draw_text_simple(float x, float y, const char* text) {
         else if (c == 'X') { glVertex2f(ox,0); glVertex2f(ox+8,10); glVertex2f(ox+8,0); glVertex2f(ox,10); }
         else if (c == 'Y') { glVertex2f(ox,0); glVertex2f(ox+4,5); glVertex2f(ox+8,0); glVertex2f(ox+4,5); glVertex2f(ox+4,5); glVertex2f(ox+4,10); }
         else if (c == 'Z') { glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox,10); glVertex2f(ox,10); glVertex2f(ox+8,10); }
-
-        // --- DIGITS (0-9) ---
         else if (c == '0') { glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox+8,10); glVertex2f(ox+8,10); glVertex2f(ox,10); glVertex2f(ox,10); glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox,10); }
         else if (c == '1') { glVertex2f(ox+4,0); glVertex2f(ox+4,10); glVertex2f(ox,2); glVertex2f(ox+4,0); }
         else if (c == '2') { glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox+8,5); glVertex2f(ox+8,5); glVertex2f(ox,5); glVertex2f(ox,5); glVertex2f(ox,10); glVertex2f(ox,10); glVertex2f(ox+8,10); }
@@ -85,20 +97,18 @@ void draw_text_simple(float x, float y, const char* text) {
         else if (c == '7') { glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox+4,10); }
         else if (c == '8') { glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox+8,10); glVertex2f(ox+8,10); glVertex2f(ox,10); glVertex2f(ox,10); glVertex2f(ox,0); glVertex2f(ox,5); glVertex2f(ox+8,5); }
         else if (c == '9') { glVertex2f(ox,0); glVertex2f(ox+8,0); glVertex2f(ox+8,0); glVertex2f(ox+8,10); glVertex2f(ox,5); glVertex2f(ox+8,5); glVertex2f(ox,0); glVertex2f(ox,5); }
-
-        // --- PUNCTUATION ---
-        else if (c == '.') { glVertex2f(ox+3, 9); glVertex2f(ox+5, 9); glVertex2f(ox+3, 10); glVertex2f(ox+5, 10); }
-        else if (c == ':') { glVertex2f(ox+4, 2); glVertex2f(ox+4, 3); glVertex2f(ox+4, 7); glVertex2f(ox+4, 8); }
-        else if (c == '-') { glVertex2f(ox+2, 5); glVertex2f(ox+6, 5); }
+        else if (c == '.') { glVertex2f(ox+3,9); glVertex2f(ox+5,9); glVertex2f(ox+3,10); glVertex2f(ox+5,10); }
+        else if (c == ':') { glVertex2f(ox+4,2); glVertex2f(ox+4,3); glVertex2f(ox+4,7); glVertex2f(ox+4,8); }
+        else if (c == '-') { glVertex2f(ox+2,5); glVertex2f(ox+6,5); }
     }
     glEnd();
     glLineWidth(1.0f);
     glPopMatrix();
 }
 
-void draw_hud(int target_index, float intensity, World* w, int scr_w, int scr_h, bool help_visible) {
-    // Save state so the HUD does not interfere with 3D rendering
-    GLboolean lighting_was_on = glIsEnabled(GL_LIGHTING);
+void draw_hud(int target_index, float intensity, World* w,
+              int scr_w, int scr_h, bool help_visible) {
+    GLboolean lighting_was_on  = glIsEnabled(GL_LIGHTING);
     GLboolean cull_face_was_on = glIsEnabled(GL_CULL_FACE);
 
     glMatrixMode(GL_PROJECTION);
@@ -115,88 +125,57 @@ void draw_hud(int target_index, float intensity, World* w, int scr_w, int scr_h,
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    // --- 1. INTENSITY BAR (bottom-left - brightness) ---
+    // Intensity bar (bottom-left)
     glColor4f(1.0f, 1.0f, 1.0f, 0.2f);
     glBegin(GL_QUADS);
-        glVertex2f(20, scr_h - 50);
-        glVertex2f(220, scr_h - 50);
-        glVertex2f(220, scr_h - 20);
-        glVertex2f(20, scr_h - 20);
+        glVertex2f(20, scr_h-50); glVertex2f(220, scr_h-50);
+        glVertex2f(220, scr_h-20); glVertex2f(20, scr_h-20);
     glEnd();
-
     float fill = ((intensity - 0.1f) / 1.9f) * 200.0f;
     glColor4f(1.0f, 0.7f, 0.0f, 0.8f);
     glBegin(GL_QUADS);
-        glVertex2f(20, scr_h - 50);
-        glVertex2f(20 + fill, scr_h - 50);
-        glVertex2f(20 + fill, scr_h - 20);
-        glVertex2f(20, scr_h - 20);
+        glVertex2f(20, scr_h-50); glVertex2f(20+fill, scr_h-50);
+        glVertex2f(20+fill, scr_h-20); glVertex2f(20, scr_h-20);
     glEnd();
 
-    // --- 2. PLANET INFO PANEL (top-right) ---
-    // Only draw when a planet is selected
+    // Planet info (top-right)
     if (target_index != -1 && target_index < w->count) {
         Planet* p = &w->planets[target_index];
-
-        // Panel background (dark blue, translucent)
         glColor4f(0.0f, 0.1f, 0.2f, 0.7f);
         glBegin(GL_QUADS);
-            glVertex2f(scr_w - 280, 20);
-            glVertex2f(scr_w - 20, 20);
-            glVertex2f(scr_w - 20, 160);
-            glVertex2f(scr_w - 280, 160);
+            glVertex2f(scr_w-280,20); glVertex2f(scr_w-20,20);
+            glVertex2f(scr_w-20,160); glVertex2f(scr_w-280,160);
         glEnd();
-
-        // Panel border (bright blue)
         glColor4f(0.0f, 0.8f, 1.0f, 1.0f);
         glBegin(GL_LINE_LOOP);
-            glVertex2f(scr_w - 280, 20);
-            glVertex2f(scr_w - 20, 20);
-            glVertex2f(scr_w - 20, 160);
-            glVertex2f(scr_w - 280, 160);
+            glVertex2f(scr_w-280,20); glVertex2f(scr_w-20,20);
+            glVertex2f(scr_w-20,160); glVertex2f(scr_w-280,160);
         glEnd();
-
-        // Render text fields
-        char buffer[64];
-
-        // Planet name (white)
-        glColor3f(1.0f, 1.0f, 1.0f);
-        draw_text_simple(scr_w - 260, 40, p->name);
-
-        // Distance
-        sprintf(buffer, "DIST: %.1f", p->distance);
-        draw_text_simple(scr_w - 260, 75, buffer);
-
-        // Size
-        sprintf(buffer, "SIZE: %.2f", p->size);
-        draw_text_simple(scr_w - 260, 110, buffer);
-
-        // Orbital speed
-        sprintf(buffer, "SPD: %.3f", p->orbit_speed);
-        draw_text_simple(scr_w - 260, 140, buffer);
+        char buf[64];
+        glColor3f(1,1,1);
+        draw_text_simple(scr_w-260, 40, p->name);
+        sprintf(buf, "DIST: %.1f", p->distance);  draw_text_simple(scr_w-260, 75,  buf);
+        sprintf(buf, "SIZE: %.2f", p->size);       draw_text_simple(scr_w-260, 110, buf);
+        sprintf(buf, "SPD: %.3f",  p->orbit_speed);draw_text_simple(scr_w-260, 140, buf);
     }
 
-    // --- 3. HELP ICON (top-left) ---
+    // Help hint (top-left)
     if (!help_visible) {
         glColor4f(0.0f, 0.8f, 1.0f, 0.5f);
         glBegin(GL_LINE_LOOP);
-            glVertex2f(20, 20); glVertex2f(100, 20);
-            glVertex2f(100, 50); glVertex2f(20, 50);
+            glVertex2f(20,20); glVertex2f(100,20);
+            glVertex2f(100,50); glVertex2f(20,50);
         glEnd();
-
         glBegin(GL_LINES);
-            glVertex2f(60, 30); glVertex2f(60, 32); // dot of 'i'
-            glVertex2f(60, 37); glVertex2f(60, 45); // stem of 'i'
+            glVertex2f(60,30); glVertex2f(60,32);
+            glVertex2f(60,37); glVertex2f(60,45);
         glEnd();
     }
 
-    // Restore original GL state
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
-
-    if (lighting_was_on) glEnable(GL_LIGHTING);
+    if (lighting_was_on)  glEnable(GL_LIGHTING);
     if (cull_face_was_on) glEnable(GL_CULL_FACE);
-
     glPopMatrix();
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
@@ -208,36 +187,27 @@ void draw_sun_glow(float size, float r, float g, float b) {
     glDisable(GL_LIGHTING);
     glDisable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE); // Glow blend
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
     glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
-
     int layers = 8;
     for (int i = 1; i <= layers; i++) {
-        // Expanding rings with fast alpha falloff
         float current_size = size * (1.0f + (float)i * 0.25f);
         float alpha = 0.12f * (1.0f - (float)i / layers);
-
         glColor4f(r, g, b, alpha);
-
-        // Billboard matrix: always face the camera
         float mv[16];
         glGetFloatv(GL_MODELVIEW_MATRIX, mv);
-        for(int k=0; k<3; k++) for(int j=0; j<3; j++) {
-            if(k==j) mv[k*4+j] = 1.0f; else mv[k*4+j] = 0.0f;
-        }
+        for (int k = 0; k < 3; k++) for (int j = 0; j < 3; j++)
+            mv[k*4+j] = (k == j) ? 1.0f : 0.0f;
         glLoadMatrixf(mv);
-
         glBegin(GL_TRIANGLE_FAN);
-        glVertex3f(0, 0, 0);
-        // Step 2 degrees (180 points) for a smooth circle
+        glVertex3f(0,0,0);
         for (int angle = 0; angle <= 360; angle += 2) {
             float rad = angle * 3.14159f / 180.0f;
-            glVertex3f(cosf(rad) * current_size, sinf(rad) * current_size, 0);
+            glVertex3f(cosf(rad)*current_size, sinf(rad)*current_size, 0);
         }
         glEnd();
     }
-
     glDepthMask(GL_TRUE);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_LIGHTING);
@@ -245,75 +215,40 @@ void draw_sun_glow(float size, float r, float g, float b) {
     glPopMatrix();
 }
 
+typedef struct { float x, y, z; } Vertex;
+typedef struct { int v[3]; } Face;
 typedef struct {
-    float x, y, z;
-} Vertex;
-
-typedef struct {
-    int v[3];
-} Face;
-
-typedef struct {
-    Vertex* vertices;
-    Face* faces;
-    int vertex_count;
-    int face_count;
-    int initialized;
+    Vertex* vertices; Face* faces;
+    int vertex_count, face_count, initialized;
 } OBJModel;
-
-typedef struct {
-    float x, y, z;
-    float angle;
-    float speed;
-} Comet;
-
-// Global instances
+typedef struct { float x, y, z, angle, speed; } Comet;
 
 void load_asteroid_obj(const char* filename, OBJModel* model) {
     FILE* file = fopen(filename, "r");
-    if (!file) {
-        printf("Error: file not found: %s\n", filename);
-        model->initialized = 0;
-        return;
-    }
-
+    if (!file) { printf("Error: file not found: %s\n", filename); model->initialized = 0; return; }
     char line[256];
-    model->vertex_count = 0;
-    model->face_count = 0;
-
-    // Pass 1: count vertices and faces
+    model->vertex_count = model->face_count = 0;
     while (fgets(line, sizeof(line), file)) {
-        if (line[0] == 'v' && line[1] == ' ') model->vertex_count++;
-        if (line[0] == 'f' && line[1] == ' ') model->face_count++;
+        if (line[0]=='v' && line[1]==' ') model->vertex_count++;
+        if (line[0]=='f' && line[1]==' ') model->face_count++;
     }
-
-    // Allocate memory
     model->vertices = (Vertex*)malloc(sizeof(Vertex) * model->vertex_count);
-    model->faces = (Face*)malloc(sizeof(Face) * model->face_count);
-
-    if (!model->vertices || !model->faces) {
-        printf("Error: out of memory for OBJ model!\n");
-        fclose(file);
-        return;
-    }
-
+    model->faces    = (Face*)  malloc(sizeof(Face)   * model->face_count);
+    if (!model->vertices || !model->faces) { printf("OBJ out of memory\n"); fclose(file); return; }
     rewind(file);
-
-    int v_idx = 0, f_idx = 0;
-    // Pass 2: read data
+    int vi = 0, fi = 0;
     while (fgets(line, sizeof(line), file)) {
-        if (line[0] == 'v' && line[1] == ' ') {
-            sscanf(line, "v %f %f %f", &model->vertices[v_idx].x, &model->vertices[v_idx].y, &model->vertices[v_idx].z);
-            v_idx++;
-        } else if (line[0] == 'f' && line[1] == ' ') {
-            // Parse indices, handle v/vt/vn format via atoi
-            char* p = line + 2;
+        if (line[0]=='v' && line[1]==' ') {
+            sscanf(line, "v %f %f %f", &model->vertices[vi].x, &model->vertices[vi].y, &model->vertices[vi].z);
+            vi++;
+        } else if (line[0]=='f' && line[1]==' ') {
+            char* p = line+2;
             for (int i = 0; i < 3; i++) {
-                model->faces[f_idx].v[i] = atoi(p) - 1;
+                model->faces[fi].v[i] = atoi(p)-1;
                 while (*p && *p != ' ') p++;
                 while (*p && *p == ' ') p++;
             }
-            f_idx++;
+            fi++;
         }
     }
     fclose(file);
@@ -326,13 +261,12 @@ void draw_obj_model(OBJModel* model, float scale) {
     glPushMatrix();
     glScalef(scale, scale, scale);
     glBegin(GL_TRIANGLES);
-    for (int i = 0; i < model->face_count; i++) {
+    for (int i = 0; i < model->face_count; i++)
         for (int j = 0; j < 3; j++) {
             int idx = model->faces[i].v[j];
             glNormal3f(model->vertices[idx].x, model->vertices[idx].y, model->vertices[idx].z);
             glVertex3f(model->vertices[idx].x, model->vertices[idx].y, model->vertices[idx].z);
         }
-    }
     glEnd();
     glPopMatrix();
 }
@@ -342,36 +276,24 @@ void draw_comet(Comet* c, float delta_time, OBJModel* model) {
     c->x = cosf(c->angle) * 40.0f;
     c->z = sinf(c->angle) * 15.0f;
     c->y = sinf(c->angle * 0.5f) * 10.0f;
-
     glPushMatrix();
     glTranslatef(c->x, c->y, c->z);
-
-    // Rock core (OBJ model)
     glEnable(GL_LIGHTING);
     glColor3f(0.8f, 0.8f, 0.9f);
     draw_obj_model(model, 0.6f);
-
-    // Tail (bright blue)
     glDisable(GL_LIGHTING);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
     glColor4f(0.5f, 0.8f, 1.0f, 0.4f);
-
-    // TODO: add comet tail geometry here (GL_TRIANGLES)
-
     glDisable(GL_BLEND);
     glPopMatrix();
 }
 
 
 int main(int argc, char* args[]) {
-    (void)argc;
-    (void)args;
+    (void)argc; (void)args;
 
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        printf("SDL error: %s\n", SDL_GetError());
-        return 1;
-    }
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) { printf("SDL error: %s\n", SDL_GetError()); return 1; }
 
     SDL_Window* window = SDL_CreateWindow(
         "Solaris",
@@ -379,33 +301,28 @@ int main(int argc, char* args[]) {
         SCREEN_WIDTH, SCREEN_HEIGHT,
         SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE
     );
+    if (!window) { printf("window error: %s\n", SDL_GetError()); return 1; }
 
-    if (!window) {
-        printf("window error: %s\n", SDL_GetError());
-        return 1;
-    }
     SDL_SetRelativeMouseMode(SDL_FALSE);
     SDL_ShowCursor(SDL_ENABLE);
 
     SDL_GLContext glContext = SDL_GL_CreateContext(window);
-
     glEnable(GL_DEPTH_TEST);
     glClearColor(0.0f, 0.0f, 0.05f, 1.0f);
 
-    Uint32 last_time = SDL_GetTicks();
-    float delta_time = 0;
-    bool running     = true;
-    bool fog_enabled = true;
+    Uint32 last_time  = SDL_GetTicks();
+    float  delta_time = 0;
+    bool   running    = true;
+    bool   fog_enabled = true;
     SDL_Event event;
 
-    World world;
-    float sun_intensity         = 1.0f;
-    bool  show_help             = false;
-    GLuint help_texture_id      = 0;
-    GLuint skybox_texture_id    = 0;
-    GLuint sun_glow_texture_id  = 0;
-    OBJModel comet_model        = {NULL, NULL, 0, 0, 0};
-    Comet halley                = {0, 0, 0, 0, 0.0009f};
+    World  world;
+    float  sun_intensity     = 1.0f;
+    bool   show_help         = false;
+    GLuint help_texture_id   = 0;
+    GLuint skybox_texture_id = 0;
+    OBJModel comet_model     = {NULL, NULL, 0, 0, 0};
+    Comet    halley          = {0, 0, 0, 0, 0.0009f};
     Asteroid asteroid_belt[MAX_ASTEROID];
 
     Camera camera;
@@ -413,12 +330,10 @@ int main(int argc, char* args[]) {
 
     int win_w = SCREEN_WIDTH, win_h = SCREEN_HEIGHT;
 
-    AppState app_state = STATE_MENU;
-    Button menu_btns[3] = {0};
-    EditorState editor = {-1, "NewPlanet", 3, false};
+    AppState    app_state = STATE_MENU;
+    Button      menu_btns[3] = {0};
+    EditorState editor    = {-1, "NewPlanet", 3, false};
 
-    // SDL renderer for 2D UI (shares the same window)
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     TTF_Font* font = ui_init("assets/font.ttf", 15);
 
     setup_projection(win_w, win_h);
@@ -426,20 +341,11 @@ int main(int argc, char* args[]) {
     printf("Planet count: %d\n", world.count);
 
     init_asteroid_belt(asteroid_belt);
-/*
-    halley.angle = 0;
-    halley.speed = 0.5;
-*/
 
-
-    // ---------------------------------------------------------
-    // NEW: initialise ring particles for Saturn and Uranus
-    // ---------------------------------------------------------
     for (int i = 0; i < world.count; i++) {
         if (strcmp(world.planets[i].name, "Szaturnusz") == 0 ||
-            strcmp(world.planets[i].name, "Uranusz")    == 0) {
+            strcmp(world.planets[i].name, "Uranusz")    == 0)
             init_ring_particles(&world.planets[i]);
-        }
     }
 
     help_texture_id   = load_texture("assets/help.png");
@@ -468,183 +374,155 @@ int main(int argc, char* args[]) {
 
         Uint32 current_time = SDL_GetTicks();
         delta_time = (current_time - last_time) / 1000.0f;
-        last_time = current_time;
+        last_time  = current_time;
 
+        // ── Event handling ────────────────────────────────────────────────────
         while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) running = false;
+            if (event.type == SDL_QUIT) { running = false; break; }
 
-            // UI state routing
             if (app_state == STATE_MENU) {
                 if (event.type == SDL_MOUSEMOTION)
                     ui_menu_hover(event.motion.x, event.motion.y, menu_btns);
-                if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
-                    bool was_quit = (app_state == STATE_MENU);
-                    ui_menu_click(event.button.x, event.button.y, menu_btns, &app_state);
-                    // Check if Quit button hit (index 2 stays STATE_MENU but we set running=false)
-                    SDL_Point mp = {event.button.x, event.button.y};
-                    SDL_Rect qr = menu_btns[2].rect;
-                    if (mp.x >= qr.x && mp.x <= qr.x + qr.w && mp.y >= qr.y && mp.y <= qr.y+qr.h)
-                        running = false;
-                    (void)was_quit;
-                }
-                goto end_event;
-            }
-            if (app_state == STATE_EDITOR) {
-                if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT)
-                    ui_editor_click(event.button.x, event.button.y, &world, &editor, win_w, win_h, &app_state);
-                if (event.key.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)
-                    app_state = STATE_MENU;
-                goto end_event;
-                // ─────────────────────────────────────────────────────────
+                if (event.type == SDL_MOUSEBUTTONDOWN &&
+                    event.button.button == SDL_BUTTON_LEFT)
+                    ui_menu_click(event.button.x, event.button.y,
+                                  menu_btns, &app_state, &running);
+                continue;
             }
 
+            if (app_state == STATE_EDITOR) {
+                if (event.type == SDL_MOUSEBUTTONDOWN &&
+                    event.button.button == SDL_BUTTON_LEFT) {
+                    int cx = event.button.x, cy = event.button.y;
+                    if (cx <= PANEL_W) {
+                        ui_editor_click(cx, cy, &world, &editor,
+                                        win_w, win_h, &app_state);
+                    } else {
+                        int hit = pick_planet(cx - PANEL_W, cy, &camera, &world);
+                        if (hit != -1) editor.selected = hit;
+                    }
+                }
+                if (event.type == SDL_KEYDOWN &&
+                    event.key.keysym.sym == SDLK_ESCAPE)
+                    app_state = STATE_MENU;
+                continue;
+            }
+
+            // ── Simulation-only events ────────────────────────────────────────
             if (event.type == SDL_WINDOWEVENT &&
                 event.window.event == SDL_WINDOWEVENT_RESIZED) {
                 win_w = event.window.data1;
                 win_h = event.window.data2;
                 setup_projection(win_w, win_h);
             }
-
-            if (event.type == SDL_MOUSEBUTTONDOWN) {
-                if (event.button.button == SDL_BUTTON_LEFT) {
-                    // Trigger planet picking
-                    int hit = pick_planet(event.button.x, event.button.y, &camera, &world);
-                    if (hit != -1)
-                        target_planet_index = hit;
-                }
+            if (event.type == SDL_MOUSEBUTTONDOWN &&
+                event.button.button == SDL_BUTTON_LEFT) {
+                int hit = pick_planet(event.button.x, event.button.y, &camera, &world);
+                if (hit != -1) target_planet_index = hit;
             }
-
-            // Rotate camera (right mouse button held)
-            if (event.type == SDL_MOUSEMOTION) {
-                if (SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
-                    float sensitivity = 0.2f;
-                    camera.yaw   -= event.motion.xrel * sensitivity;
-                    camera.pitch -= event.motion.yrel * sensitivity;
-
-                    if (camera.pitch >  89.0f) camera.pitch =  89.0f;
-                    if (camera.pitch < -89.0f) camera.pitch = -89.0f;
-                }
+            if (event.type == SDL_MOUSEMOTION &&
+                (SDL_GetMouseState(NULL,NULL) & SDL_BUTTON(SDL_BUTTON_RIGHT))) {
+                camera.yaw   -= event.motion.xrel * 0.2f;
+                camera.pitch -= event.motion.yrel * 0.2f;
+                if (camera.pitch >  89.0f) camera.pitch =  89.0f;
+                if (camera.pitch < -89.0f) camera.pitch = -89.0f;
             }
-
             if (event.type == SDL_KEYDOWN) {
-                if (event.key.keysym.sym == SDLK_F1 || event.key.keysym.sym == SDLK_h){
-                    show_help = !show_help;
-                }
-
+                if (event.key.keysym.sym == SDLK_F1 ||
+                    event.key.keysym.sym == SDLK_h)  show_help = !show_help;
                 if (event.key.keysym.sym == SDLK_f) {
                     fog_enabled = !fog_enabled;
-                    if (fog_enabled) { glEnable(GL_FOG);  printf("Fog: ON\n"); }
-                    else             { glDisable(GL_FOG); printf("Fog: OFF\n"); }
+                    if (fog_enabled) glEnable(GL_FOG); else glDisable(GL_FOG);
                 }
                 if (event.key.keysym.sym == SDLK_ESCAPE) running = false;
-
                 if (event.key.keysym.sym >= SDLK_1 && event.key.keysym.sym <= SDLK_9) {
                     target_planet_index = event.key.keysym.sym - SDLK_1;
                     if (target_planet_index >= world.count) target_planet_index = -1;
                 }
                 if (event.key.keysym.sym == SDLK_0) target_planet_index = -1;
             }
-
-            end_event:;
         }
 
-        // Skip simulation update when not in simulation/editor
+        // ── MENU: draw and loop ───────────────────────────────────────────────
         if (app_state == STATE_MENU) {
+            glViewport(0, 0, win_w, win_h);   // always full window for menu
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            ui_draw_menu(font, win_w, win_h, menu_btns);
             SDL_GL_SwapWindow(window);
-            SDL_RenderPresent(renderer);
-            // Draw menu on top via SDL renderer
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-            SDL_RenderClear(renderer);
-            ui_draw_menu(renderer, font, win_w, win_h, menu_btns);
-            SDL_RenderPresent(renderer);
             continue;
         }
 
-        const Uint8* state = SDL_GetKeyboardState(NULL);
-        float speed   = 0.2f;
-        if (state[SDL_SCANCODE_LSHIFT]) speed *= 3.0f;
+        // ── Keyboard movement ─────────────────────────────────────────────────
+        const Uint8* keys = SDL_GetKeyboardState(NULL);
+        float speed = 0.2f;
+        if (keys[SDL_SCANCODE_LSHIFT]) speed *= 3.0f;
 
-        float rad_yaw = camera.yaw * (float)M_PI / 180.0f;
+        float rad_yaw   = camera.yaw   * (float)M_PI / 180.0f;
         float rad_pitch = camera.pitch * (float)M_PI / 180.0f;
 
-        if (state[SDL_SCANCODE_W] || state[SDL_SCANCODE_S] ||
-        state[SDL_SCANCODE_A] || state[SDL_SCANCODE_D] ||
-        state[SDL_SCANCODE_E] || state[SDL_SCANCODE_Q]) {
+        if (keys[SDL_SCANCODE_W]||keys[SDL_SCANCODE_S]||
+            keys[SDL_SCANCODE_A]||keys[SDL_SCANCODE_D]||
+            keys[SDL_SCANCODE_E]||keys[SDL_SCANCODE_Q])
             target_planet_index = -1;
-        }
 
-        if (state[SDL_SCANCODE_W]) {
-            float dx = -sinf(rad_yaw) * cosf(rad_pitch) * speed;
-            float dy =  sinf(rad_pitch) * speed;
-            float dz = -cosf(rad_yaw) * cosf(rad_pitch) * speed;
-            update_camera_position(&camera, dx, dy, dz, &world);
+        if (keys[SDL_SCANCODE_W]) {
+            update_camera_position(&camera,
+                -sinf(rad_yaw)*cosf(rad_pitch)*speed,
+                 sinf(rad_pitch)*speed,
+                -cosf(rad_yaw)*cosf(rad_pitch)*speed, &world);
         }
-        if (state[SDL_SCANCODE_S])
-        {
-            float dx =  sinf(rad_yaw) * cosf(rad_pitch) * speed;
-            float dy = -sinf(rad_pitch) * speed;
-            float dz =  cosf(rad_yaw) * cosf(rad_pitch) * speed;
-            update_camera_position(&camera, dx, dy, dz, &world);
+        if (keys[SDL_SCANCODE_S]) {
+            update_camera_position(&camera,
+                 sinf(rad_yaw)*cosf(rad_pitch)*speed,
+                -sinf(rad_pitch)*speed,
+                 cosf(rad_yaw)*cosf(rad_pitch)*speed, &world);
         }
-        if (state[SDL_SCANCODE_A])
-        {
-            update_camera_position(&camera, -cosf(rad_yaw) * speed, 0, sinf(rad_yaw) * speed, &world);
-        }
-        if (state[SDL_SCANCODE_D])
-        {
-            update_camera_position(&camera,  cosf(rad_yaw) * speed, 0, -sinf(rad_yaw) * speed, &world);
-        }
+        if (keys[SDL_SCANCODE_A])
+            update_camera_position(&camera, -cosf(rad_yaw)*speed, 0,  sinf(rad_yaw)*speed, &world);
+        if (keys[SDL_SCANCODE_D])
+            update_camera_position(&camera,  cosf(rad_yaw)*speed, 0, -sinf(rad_yaw)*speed, &world);
+        if (keys[SDL_SCANCODE_E]) camera.y += speed;
+        if (keys[SDL_SCANCODE_Q]) camera.y -= speed;
+        if (keys[SDL_SCANCODE_UP])    camera.pitch += 1.0f;
+        if (keys[SDL_SCANCODE_DOWN])  camera.pitch -= 1.0f;
+        if (keys[SDL_SCANCODE_LEFT])  camera.yaw   += 1.0f;
+        if (keys[SDL_SCANCODE_RIGHT]) camera.yaw   -= 1.0f;
 
-        if (state[SDL_SCANCODE_E]) camera.y += speed;
-        if (state[SDL_SCANCODE_Q]) camera.y -= speed;
+        if (keys[SDL_SCANCODE_KP_PLUS]  || keys[SDL_SCANCODE_EQUALS]) { sun_intensity += 0.01f; if (sun_intensity > 2.0f) sun_intensity = 2.0f; }
+        if (keys[SDL_SCANCODE_KP_MINUS] || keys[SDL_SCANCODE_MINUS])  { sun_intensity -= 0.01f; if (sun_intensity < 0.1f) sun_intensity = 0.1f; }
 
-        if (state[SDL_SCANCODE_UP])    camera.pitch += 1.0f;
-        if (state[SDL_SCANCODE_DOWN])  camera.pitch -= 1.0f;
-        if (state[SDL_SCANCODE_LEFT])  camera.yaw   += 1.0f;
-        if (state[SDL_SCANCODE_RIGHT]) camera.yaw   -= 1.0f;
-        if (state[SDL_SCANCODE_ESCAPE]) running = false;
-
-        // Sun intensity controls
-        if (state[SDL_SCANCODE_KP_PLUS]  || state[SDL_SCANCODE_EQUALS]) {
-            sun_intensity += 0.01f;
-            if (sun_intensity > 2.0f) sun_intensity = 2.0f;
-        }
-        if (state[SDL_SCANCODE_KP_MINUS] || state[SDL_SCANCODE_MINUS]) {
-            sun_intensity -= 0.01f;
-            if (sun_intensity < 0.1f) sun_intensity = 0.1f;
-        }
+        // ── Set viewport for current state ────────────────────────────────────
+        if (app_state == STATE_EDITOR)
+            setup_projection_editor(win_w, win_h);
+        else
+            setup_projection(win_w, win_h);
 
         // Dynamic sun colour
         float r = 1.0f;
         float g = sun_intensity > 1.0f ? 1.0f : sun_intensity;
         float b = sun_intensity > 1.5f ? 1.0f :
-                  (sun_intensity < 1.0f ? sun_intensity * 0.5f : sun_intensity - 0.5f);
+                 (sun_intensity < 1.0f ? sun_intensity * 0.5f : sun_intensity - 0.5f);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         set_view(&camera);
-
-
 
         glPushMatrix();
             glTranslatef(camera.x, camera.y, camera.z);
             draw_skybox(skybox_texture_id);
         glPopMatrix();
 
-        glDisable(GL_LIGHTING); // Disable lighting so asteroids show their own colour
+        glDisable(GL_LIGHTING);
         draw_asteroid_belt(asteroid_belt);
-        glEnable(GL_LIGHTING);  // Re-enable lighting for planets
+        glEnable(GL_LIGHTING);
 
-
-        // Update light each frame
-        float diffuse[] = {r * sun_intensity, g * sun_intensity, b * sun_intensity, 1.0f};
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
+        float diffuse[]   = {r*sun_intensity, g*sun_intensity, b*sun_intensity, 1.0f};
         float light_pos[] = {0.0f, 0.0f, 0.0f, 1.0f};
+        glLightfv(GL_LIGHT0, GL_DIFFUSE,  diffuse);
         glLightfv(GL_LIGHT0, GL_POSITION, light_pos);
 
-        // --- NEW: Calculate planet positions hierarchically ---
+        // Update planet positions
         for (int i = 0; i < world.count; i++) {
-            world.planets[i].current_angle += world.planets[i].orbit_speed * delta_time * 10.0f;
+            world.planets[i].current_angle  += world.planets[i].orbit_speed * delta_time * 10.0f;
             world.planets[i].rotation_angle += world.planets[i].rotation_speed * delta_time * 50.0f;
             Planet* p = &world.planets[i];
             float lx = cosf(p->current_angle) * p->distance;
@@ -655,9 +533,7 @@ int main(int argc, char* args[]) {
                 p->world_y = parent->world_y;
                 p->world_z = parent->world_z + lz;
             } else {
-                p->world_x = lx;
-                p->world_y = 0.0f;
-                p->world_z = lz;
+                p->world_x = lx; p->world_y = 0.0f; p->world_z = lz;
             }
         }
 
@@ -672,172 +548,112 @@ int main(int argc, char* args[]) {
         // Draw planets
         for (int i = 0; i < world.count; i++) {
             Planet* p = &world.planets[i];
-
             glPushMatrix();
             glTranslatef(p->world_x, p->world_y, p->world_z);
-
             GLUquadric* quad = gluNewQuadric();
             gluQuadricTexture(quad, GL_TRUE);
 
-            if (p->distance < 0.1f && p->parent_index == -1) { // Check for Sun
-                // --- SUN ---
+            if (p->distance < 0.1f && p->parent_index == -1) {
+                // Sun
                 glDisable(GL_LIGHTING);
                 glEnable(GL_TEXTURE_2D);
                 glBindTexture(GL_TEXTURE_2D, p->texture_id);
-
-                float current_sun_size = p->size;
-                if (sun_intensity < 0.8f)
-                    current_sun_size *= (1.0f + (0.8f - sun_intensity) * 2.0f);
-                else if (sun_intensity > 1.5f) {
-                    current_sun_size *= (1.0f - (sun_intensity - 1.5f) * 1.5f);
-                    if (current_sun_size < 0.2f) current_sun_size = 0.2f;
-                }
-
+                float ss = p->size;
+                if (sun_intensity < 0.8f)       ss *= 1.0f + (0.8f - sun_intensity) * 2.0f;
+                else if (sun_intensity > 1.5f) { ss *= 1.0f - (sun_intensity - 1.5f) * 1.5f; if (ss < 0.2f) ss = 0.2f; }
                 glColor3f(r, g, b);
-                GLUquadric* sunQuad = gluNewQuadric();
-                gluQuadricTexture(sunQuad, GL_TRUE);
-                gluSphere(sunQuad, current_sun_size, 32, 32);
-                gluDeleteQuadric(sunQuad);
-                // Sun glow - single soft layer
-                draw_sun_glow(current_sun_size * 1.5f, r, g, b);
-                glDisable(GL_LIGHTING);
-                glEnable(GL_BLEND);
-                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                GLUquadric* sq = gluNewQuadric(); gluQuadricTexture(sq, GL_TRUE);
+                gluSphere(sq, ss, 32, 32); gluDeleteQuadric(sq);
+                draw_sun_glow(ss * 1.5f, r, g, b);
+                glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
                 glColor4f(1.0f, 0.9f, 0.3f, 0.08f);
-                GLUquadric* glowQuad = gluNewQuadric();
-                gluSphere(glowQuad, current_sun_size * 1.6f, 32, 32);
-                gluDeleteQuadric(glowQuad);
+                GLUquadric* gq = gluNewQuadric();
+                gluSphere(gq, ss * 1.6f, 32, 32); gluDeleteQuadric(gq);
                 glDisable(GL_BLEND);
-                glEnable(GL_LIGHTING);
-                glColor3f(1.0f, 1.0f, 1.0f);
-                glDisable(GL_TEXTURE_2D);
-                glEnable(GL_LIGHTING);
-
-
-
+                glEnable(GL_LIGHTING); glColor3f(1,1,1); glDisable(GL_TEXTURE_2D);
             } else {
-                // --- PLANET or MOON ---
+                // Planet / Moon
                 glEnable(GL_LIGHTING);
-
                 glPushMatrix();
-                glRotatef(-90.0f, 1.0f, 0.0f, 0.0f);
-                glRotatef(p->axial_tilt,      1.0f, 0.0f, 0.0f);
-                glRotatef(p->rotation_angle,  0.0f, 0.0f, 1.0f);
-
+                glRotatef(-90.0f, 1,0,0);
+                glRotatef(p->axial_tilt,     1,0,0);
+                glRotatef(p->rotation_angle, 0,0,1);
                 glEnable(GL_TEXTURE_2D);
                 glBindTexture(GL_TEXTURE_2D, p->texture_id);
                 gluSphere(quad, p->size, 32, 32);
-
                 if (p->has_atmosphere)
                     draw_atmosphere(p->size, p->atmo_r, p->atmo_g, p->atmo_b, 0.25f);
-
                 glDisable(GL_TEXTURE_2D);
-                glPopMatrix();  // pop the tilt/rotation matrix
+                glPopMatrix();
 
-                // ---------------------------------------------------------
-                // RINGS: particle system replaces gluDisk for Saturn/Uranus
-                // ---------------------------------------------------------
-                if (strcmp(p->name, "Szaturnusz") == 0 ||
-                    strcmp(p->name, "Uranusz")    == 0) {
-
-                    // ----- animate particles -----
+                if (strcmp(p->name,"Szaturnusz")==0 || strcmp(p->name,"Uranusz")==0) {
                     for (int j = 0; j < p->particle_count; j++) {
                         p->ring_particles[j].angle += p->ring_particles[j].speed;
                         if (p->ring_particles[j].angle >= 360.0f)
                             p->ring_particles[j].angle -= 360.0f;
                     }
-
-                    // ----- draw particles -----
-                    // Uranus: rings are nearly perpendicular to the orbital plane
                     glPushMatrix();
-                    if (strcmp(p->name, "Uranusz") == 0)
-                        glRotatef(97.0f, 1.0f, 0.0f, 0.0f); // match axial tilt
+                    if (strcmp(p->name,"Uranusz")==0) glRotatef(97.0f,1,0,0);
                     draw_ring_particles(p);
                     glPopMatrix();
                 }
             }
-
             gluDeleteQuadric(quad);
             glPopMatrix();
-
             p->current_angle  += p->orbit_speed * 0.001f;
             p->rotation_angle += p->rotation_speed;
         }
 
-
         halley.angle += 0.002f;
         if (halley.angle > 6.28f) halley.angle = 0;
-
-        // Draw comet
         draw_comet(&halley, delta_time, &comet_model);
 
         draw_hud(target_planet_index, sun_intensity, &world, win_w, win_h, show_help);
 
-        // Editor overlay (left panel)
-        if (app_state == STATE_EDITOR) {
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-            SDL_RenderClear(renderer);
-            ui_draw_editor(renderer, font, &world, &editor, win_w, win_h);
-            SDL_RenderPresent(renderer);
-        }
         // Help overlay
         if (show_help) {
-            glMatrixMode(GL_PROJECTION);
-            glPushMatrix();
-            glLoadIdentity();
+            glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
             glOrtho(0, win_w, win_h, 0, -1, 1);
-
-            glMatrixMode(GL_MODELVIEW);
-            glPushMatrix();
-            glLoadIdentity();
-
-            glDisable(GL_LIGHTING);
-            glDisable(GL_DEPTH_TEST);
-            glDisable(GL_CULL_FACE);
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            glEnable(GL_TEXTURE_2D);
-            glBindTexture(GL_TEXTURE_2D, help_texture_id);
-            glColor3f(1.0f, 1.0f, 1.0f);
-
+            glMatrixMode(GL_MODELVIEW); glPushMatrix(); glLoadIdentity();
+            glDisable(GL_LIGHTING); glDisable(GL_DEPTH_TEST); glDisable(GL_CULL_FACE);
+            glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glEnable(GL_TEXTURE_2D); glBindTexture(GL_TEXTURE_2D, help_texture_id);
+            glColor3f(1,1,1);
             glBegin(GL_QUADS);
-            glTexCoord2f(0, 0); glVertex2f(100, 100);
-            glTexCoord2f(1, 0); glVertex2f(win_w - 100, 100);
-            glTexCoord2f(1, 1); glVertex2f(win_w - 100, win_h - 100);
-            glTexCoord2f(0, 1); glVertex2f(100, win_h - 100);
+            glTexCoord2f(0,0); glVertex2f(100,         100);
+            glTexCoord2f(1,0); glVertex2f(win_w-100,   100);
+            glTexCoord2f(1,1); glVertex2f(win_w-100,   win_h-100);
+            glTexCoord2f(0,1); glVertex2f(100,         win_h-100);
             glEnd();
-
-            glDisable(GL_BLEND);
-            glDisable(GL_TEXTURE_2D);
-            glEnable(GL_DEPTH_TEST);
-            glEnable(GL_CULL_FACE);
-
-            glPopMatrix();
-            glMatrixMode(GL_PROJECTION);
-            glPopMatrix();
+            glDisable(GL_BLEND); glDisable(GL_TEXTURE_2D);
+            glEnable(GL_DEPTH_TEST); glEnable(GL_CULL_FACE);
+            glPopMatrix(); glMatrixMode(GL_PROJECTION); glPopMatrix();
             glMatrixMode(GL_MODELVIEW);
         }
 
+        // ── Editor panel: drawn BEFORE swap so it appears on top ─────────────
+        if (app_state == STATE_EDITOR) {
+            glViewport(0, 0, win_w, win_h);   // full window for the 2D panel
+            ui_draw_editor(font, &world, &editor, win_w, win_h);
+        }
+
+        // Single swap — everything is now in the back buffer
         SDL_GL_SwapWindow(window);
     }
 
-    // ---------------------------------------------------------
-    // NEW: free ring particle memory before exit
-    // ---------------------------------------------------------
+    // Cleanup
     for (int i = 0; i < world.count; i++) {
         if (world.planets[i].ring_particles) {
             free(world.planets[i].ring_particles);
             world.planets[i].ring_particles = NULL;
         }
     }
+    if (comet_model.vertices) free(comet_model.vertices);
+    if (comet_model.faces)    free(comet_model.faces);
 
-
-    if (renderer) SDL_DestroyRenderer(renderer);
     ui_quit(font);
-
     SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(window);
     SDL_Quit();
-
     return 0;
 }
