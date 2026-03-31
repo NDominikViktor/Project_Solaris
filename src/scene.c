@@ -158,8 +158,8 @@ void init_ring_particles(Planet* p) {
         return;
     }
 
-    float inner = (strcmp(p->name, "Uranusz") == 0) ? 1.5f : 1.3f;
-    float outer = (strcmp(p->name, "Uranusz") == 0) ? 1.7f : 2.1f;
+    float inner = (strcmp(p->name, "Uranus") == 0) ? 1.5f : 1.3f;
+    float outer = (strcmp(p->name, "Uranus") == 0) ? 1.7f : 2.1f;
 
     for (int i = 0; i < p->particle_count; i++) {
         Particle* part = &p->ring_particles[i];
@@ -183,7 +183,7 @@ void draw_ring_particles(Planet* p) {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glPointSize(2.0f);
 
-    int is_uranus = (strcmp(p->name, "Uranusz") == 0);
+    int is_uranus = (strcmp(p->name, "Uranus") == 0);
 
     glBegin(GL_POINTS);
     for (int i = 0; i < p->particle_count; i++) {

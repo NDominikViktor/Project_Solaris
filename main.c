@@ -343,8 +343,8 @@ int main(int argc, char* args[]) {
     init_asteroid_belt(asteroid_belt);
 
     for (int i = 0; i < world.count; i++) {
-        if (strcmp(world.planets[i].name, "Szaturnusz") == 0 ||
-            strcmp(world.planets[i].name, "Uranusz")    == 0)
+        if (strcmp(world.planets[i].name, "Saturn") == 0 ||
+            strcmp(world.planets[i].name, "Uranus") == 0)
             init_ring_particles(&world.planets[i]);
     }
 
@@ -586,14 +586,14 @@ int main(int argc, char* args[]) {
                 glDisable(GL_TEXTURE_2D);
                 glPopMatrix();
 
-                if (strcmp(p->name,"Szaturnusz")==0 || strcmp(p->name,"Uranusz")==0) {
+                if (strcmp(p->name,"Saturn")==0 || strcmp(p->name,"Uranus")==0) {
                     for (int j = 0; j < p->particle_count; j++) {
                         p->ring_particles[j].angle += p->ring_particles[j].speed;
                         if (p->ring_particles[j].angle >= 360.0f)
                             p->ring_particles[j].angle -= 360.0f;
                     }
                     glPushMatrix();
-                    if (strcmp(p->name,"Uranusz")==0) glRotatef(97.0f,1,0,0);
+                    if (strcmp(p->name,"Uranus")==0) glRotatef(97.0f,1,0,0);
                     draw_ring_particles(p);
                     glPopMatrix();
                 }
