@@ -113,7 +113,7 @@ void ui_menu_hover(int x, int y, Button btns[3]);
  * @param world    World to serialise.
  * @param filename Destination file path (e.g. "assets/planets.csv").
  */
-void save_planets(World* world, const char* filename);
+void save_planets(const World* world, const char* filename);
 
 
 #endif //SOLARIS_UI_H

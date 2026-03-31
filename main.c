@@ -8,7 +8,7 @@
 #include "scene.h"
 #include <string.h>
 #include <stdlib.h>
-
+#include "ui.h"
 
 
 const int SCREEN_WIDTH  = 1280;
@@ -412,6 +412,15 @@ int main(int argc, char* args[]) {
     init_camera(&camera);
 
     int win_w = SCREEN_WIDTH, win_h = SCREEN_HEIGHT;
+
+    AppState app_state = STATE_MENU;
+    Button menu_btns[3] = {0};
+    EditorState editor = {-1, "NewPlanet", 3, false};
+
+    // SDL renderer for 2D UI (shares the same window)
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    TTF_Font* font = ui_init("assets/font.ttf", 15);
+
     setup_projection(win_w, win_h);
     load_planets(&world, "assets/planets.csv");
     printf("Planet count: %d\n", world.count);
@@ -464,6 +473,31 @@ int main(int argc, char* args[]) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) running = false;
 
+            // UI state routing
+            if (app_state == STATE_MENU) {
+                if (event.type == SDL_MOUSEMOTION)
+                    ui_menu_hover(event.motion.x, event.motion.y, menu_btns);
+                if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
+                    bool was_quit = (app_state == STATE_MENU);
+                    ui_menu_click(event.button.x, event.button.y, menu_btns, &app_state);
+                    // Check if Quit button hit (index 2 stays STATE_MENU but we set running=false)
+                    SDL_Point mp = {event.button.x, event.button.y};
+                    SDL_Rect qr = menu_btns[2].rect;
+                    if (mp.x >= qr.x && mp.x <= qr.x + qr.w && mp.y >= qr.y && mp.y <= qr.y+qr.h)
+                        running = false;
+                    (void)was_quit;
+                }
+                goto end_event;
+            }
+            if (app_state == STATE_EDITOR) {
+                if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT)
+                    ui_editor_click(event.button.x, event.button.y, &world, &editor, win_w, win_h, &app_state);
+                if (event.key.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)
+                    app_state = STATE_MENU;
+                goto end_event;
+                // ─────────────────────────────────────────────────────────
+            }
+
             if (event.type == SDL_WINDOWEVENT &&
                 event.window.event == SDL_WINDOWEVENT_RESIZED) {
                 win_w = event.window.data1;
@@ -511,6 +545,20 @@ int main(int argc, char* args[]) {
                 if (event.key.keysym.sym == SDLK_0) target_planet_index = -1;
             }
 
+            end_event:;
+        }
+
+        // Skip simulation update when not in simulation/editor
+        if (app_state == STATE_MENU) {
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            SDL_GL_SwapWindow(window);
+            SDL_RenderPresent(renderer);
+            // Draw menu on top via SDL renderer
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+            SDL_RenderClear(renderer);
+            ui_draw_menu(renderer, font, win_w, win_h, menu_btns);
+            SDL_RenderPresent(renderer);
+            continue;
         }
 
         const Uint8* state = SDL_GetKeyboardState(NULL);
@@ -724,6 +772,14 @@ int main(int argc, char* args[]) {
         draw_comet(&halley, delta_time, &comet_model);
 
         draw_hud(target_planet_index, sun_intensity, &world, win_w, win_h, show_help);
+
+        // Editor overlay (left panel)
+        if (app_state == STATE_EDITOR) {
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+            SDL_RenderClear(renderer);
+            ui_draw_editor(renderer, font, &world, &editor, win_w, win_h);
+            SDL_RenderPresent(renderer);
+        }
         // Help overlay
         if (show_help) {
             glMatrixMode(GL_PROJECTION);
@@ -774,6 +830,10 @@ int main(int argc, char* args[]) {
             world.planets[i].ring_particles = NULL;
         }
     }
+
+
+    if (renderer) SDL_DestroyRenderer(renderer);
+    ui_quit(font);
 
     SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(window);
