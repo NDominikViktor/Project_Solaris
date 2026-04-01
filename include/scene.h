@@ -31,8 +31,10 @@ typedef struct {
     float rotation_angle;    /**< Current self-rotation angle in degrees. */
     float axial_tilt;        /**< Axial tilt in degrees. */
     GLuint texture_id;       /**< OpenGL texture handle. */
+    char  texture_name[64];  /**< Name of the texture file. */
     int   has_atmosphere;    /**< Non-zero if an atmosphere halo should be drawn. */
     float atmo_r, atmo_g, atmo_b; /**< Atmosphere colour (RGB, 0-1). */
+    int   has_rings;         /**< Non-zero if the planet has a ring system. */
     Particle* ring_particles;     /**< Heap-allocated ring particle array, or NULL. */
     int   particle_count;    /**< Number of elements in ring_particles. */
     int   parent_index;      /**< Index of parent in World.planets, or -1 for root. */
@@ -77,12 +79,15 @@ void load_planets(World* world, const char* filename);
 /**
  * @brief Allocate and initialise ring particles for a planet.
  *
- * Must be called once after load_planets() for any planet that should
- * display a particle ring (Saturn, Uranus).
- *
  * @param p Pointer to the Planet that owns the ring.
  */
 void init_ring_particles(Planet* p);
+
+/**
+ * @brief Free ring particles for a planet.
+ * @param p Pointer to the Planet.
+ */
+void free_ring_particles(Planet* p);
 
 /**
  * @brief Draw all ring particles belonging to a planet.
@@ -92,6 +97,13 @@ void init_ring_particles(Planet* p);
  * @param p Pointer to the Planet whose ring should be drawn.
  */
 void draw_ring_particles(Planet* p);
+
+/**
+ * @brief Draw shadows of moons onto their parent planets.
+ *
+ * @param world Pointer to the World.
+ */
+void draw_moon_shadows(World* world);
 
 /**
  * @brief Select a planet by casting a ray through the given screen pixel.
@@ -125,5 +137,12 @@ void init_asteroid_belt(Asteroid* asteroid_belt);
  * @param asteroid_belt Pointer to an array of MAX_ASTEROID Asteroid elements.
  */
 void draw_asteroid_belt(Asteroid* asteroid_belt);
+
+/**
+ * @brief Helper to load a texture from file.
+ * @param filename Path to the texture.
+ * @return OpenGL texture ID.
+ */
+unsigned int load_texture(const char* filename);
 
 #endif /* SCENE_H */

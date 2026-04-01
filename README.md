@@ -47,6 +47,7 @@ make clean
 | + / - (numpad or main) | Increase / decrease sun intensity |
 | F | Toggle fog |
 | F1 / H | Toggle help overlay |
+| O | Toggle Orbit
 | ESC | Quit |
 
 ## Third-party licenses

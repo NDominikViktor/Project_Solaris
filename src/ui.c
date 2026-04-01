@@ -342,7 +342,16 @@ void ui_draw_editor(TTF_Font* font, World* world, EditorState* es,
     p->distance      = draw_slider(font, sx, sy, sw, "Distance",     p->distance,      0.0f, 60.0f,  win_w, win_h); sy += 44.0f;
     p->orbit_speed   = draw_slider(font, sx, sy, sw, "Orbit speed",  p->orbit_speed,   0.0f,  0.5f,  win_w, win_h); sy += 44.0f;
     p->rotation_speed= draw_slider(font, sx, sy, sw, "Rotation",     p->rotation_speed,0.0f,  2.0f,  win_w, win_h); sy += 44.0f;
-    p->axial_tilt    = draw_slider(font, sx, sy, sw, "Axial tilt",   p->axial_tilt,    0.0f,180.0f,  win_w, win_h); sy += 50.0f;
+    p->axial_tilt    = draw_slider(font, sx, sy, sw, "Axial tilt",   p->axial_tilt,    0.0f,180.0f,  win_w, win_h); sy += 44.0f;
+
+    // Rings toggle
+    if (font) {
+        char ring_buf[32];
+        snprintf(ring_buf, sizeof(ring_buf), "Rings: %s", p->has_rings ? "ON" : "OFF");
+        ui_draw_text(font, ring_buf, sx, sy, 0.8f, 0.8f, 0.8f, 1.0f, win_w, win_h);
+        gl_draw_rect(sx + 100, sy - 2, 60, 20, 0.31f, 0.55f, 0.86f, 1.0f);
+    }
+    sy += 44.0f;
 
     // Texture picker
     if (font) ui_draw_text(font, "Texture:", sx, sy, 0.51f, 0.51f, 0.59f, 1.0f, win_w, win_h);
@@ -369,7 +378,6 @@ void ui_draw_editor(TTF_Font* font, World* world, EditorState* es,
                      0.55f * bc + 0.24f * (1 - bc),
                      bc, 1.0f);
 
-        // Label without extension
         char label[32];
         strncpy(label, TEXTURE_FILES[i], sizeof(label) - 1);
         label[sizeof(label) - 1] = '\0';
@@ -390,7 +398,7 @@ void ui_draw_editor(TTF_Font* font, World* world, EditorState* es,
     // Save button
     gl_fill_rect(sx, sy, sw, 32, 0.08f, 0.24f, 0.12f, 0.9f);
     gl_draw_rect(sx, sy, sw, 32, 0.24f, 0.78f, 0.31f, 1.0f);
-    if (font) draw_text_centered(font, "Save to CSV", sx, sy, sw, 32,
+    if (font) draw_text_centered(font, "Save Custom", sx, sy, sw, 32,
                                   0.31f, 0.78f, 0.39f, 1.0f, win_w, win_h);
 
     end_2d();
@@ -415,17 +423,19 @@ void ui_editor_click(int x, int y, World* world, EditorState* es,
     if ((float)x >= 8 && (float)x <= 98 && (float)y >= btn_y && (float)y <= btn_y + 26) {
         if (world->count < 20) {
             Planet* p = &world->planets[world->count];
-            snprintf(p->name, sizeof(p->name), "Planet%d", world->count);
+            snprintf(p->name, sizeof(p->name), "NewObj%d", world->count);
             p->distance = 10.0f; p->size = 0.5f;
             p->orbit_speed = 0.05f; p->rotation_speed = 0.3f;
             p->axial_tilt = 0.0f; p->has_atmosphere = 0;
             p->atmo_r = p->atmo_g = p->atmo_b = 0.0f;
             p->ring_particles = NULL; p->particle_count = 0;
+            p->has_rings = 0;
             p->parent_index = 0;
             p->world_x = p->world_y = p->world_z = 0.0f;
             p->current_angle = p->rotation_angle = 0.0f;
+            strncpy(p->texture_name, TEXTURE_FILES[es->selected_texture], sizeof(p->texture_name)-1);
             char path[128];
-            snprintf(path, sizeof(path), "assets/%s", TEXTURE_FILES[es->selected_texture]);
+            snprintf(path, sizeof(path), "assets/%s", p->texture_name);
             extern GLuint load_texture(const char*);
             p->texture_id = load_texture(path);
             es->selected = world->count++;
@@ -435,7 +445,8 @@ void ui_editor_click(int x, int y, World* world, EditorState* es,
 
     // Delete
     if ((float)x >= 106 && (float)x <= 196 && (float)y >= btn_y && (float)y <= btn_y + 26) {
-        if (es->selected >= 1 && es->selected < world->count) {
+        if (es->selected >= 0 && es->selected < world->count) {
+            free_ring_particles(&world->planets[es->selected]);
             for (int i = es->selected; i < world->count - 1; i++)
                 world->planets[i] = world->planets[i + 1];
             world->count--;
@@ -450,10 +461,22 @@ void ui_editor_click(int x, int y, World* world, EditorState* es,
         *state = STATE_MENU; return;
     }
 
-    // Texture picker + Save
+    // Properties
     if (es->selected >= 0 && es->selected < world->count) {
         float sx = 14.0f, sw = PANEL_W - 28.0f;
-        float sy = btn_y + 40.0f + 28.0f + 5 * 44.0f + 22.0f;
+        float sy_rings = btn_y + 40.0f + 28.0f + 5 * 44.0f;
+
+        // Rings toggle click
+        if ((float)x >= sx + 100 && (float)x <= sx + 160 && (float)y >= sy_rings - 2 && (float)y <= sy_rings + 18) {
+            world->planets[es->selected].has_rings = !world->planets[es->selected].has_rings;
+            if (world->planets[es->selected].has_rings)
+                init_ring_particles(&world->planets[es->selected]);
+            else
+                free_ring_particles(&world->planets[es->selected]);
+            return;
+        }
+
+        float sy_tex = sy_rings + 44.0f + 22.0f;
         int tx_cols = 4;
         float tx_w = (sw - (tx_cols - 1) * 4.0f) / tx_cols;
         float tx_h = 20.0f;
@@ -462,10 +485,11 @@ void ui_editor_click(int x, int y, World* world, EditorState* es,
             float col = (float)(i % tx_cols);
             float row = (float)(i / tx_cols);
             float tx = sx + col * (tx_w + 4);
-            float ty = sy + row * (tx_h + 4);
+            float ty = sy_tex + row * (tx_h + 4);
             if ((float)x >= tx && (float)x <= tx + tx_w &&
                 (float)y >= ty && (float)y <= ty + tx_h) {
                 es->selected_texture = i;
+                strncpy(world->planets[es->selected].texture_name, TEXTURE_FILES[i], sizeof(world->planets[es->selected].texture_name)-1);
                 char path[128];
                 snprintf(path, sizeof(path), "assets/%s", TEXTURE_FILES[i]);
                 extern GLuint load_texture(const char*);
@@ -475,11 +499,11 @@ void ui_editor_click(int x, int y, World* world, EditorState* es,
         }
 
         int tx_rows = (TEXTURE_COUNT + tx_cols - 1) / tx_cols;
-        float save_y = sy + tx_rows * (tx_h + 4) + 12.0f;
+        float save_y = sy_tex + tx_rows * (tx_h + 4) + 12.0f;
         if ((float)x >= sx && (float)x <= sx + sw &&
             (float)y >= save_y && (float)y <= save_y + 32) {
-            save_planets(world, "assets/planets.csv");
-            printf("Saved to assets/planets.csv\n");
+            save_planets(world, "assets/custom_planets.csv");
+            printf("Saved to assets/custom_planets.csv\n");
             return;
         }
     }
@@ -491,27 +515,18 @@ void save_planets(World* world, const char* filename) {
     FILE* f = fopen(filename, "w");
     if (!f) { printf("Error: cannot open %s for writing\n", filename); return; }
 
-    fprintf(f, "#name,distance,size,orbit_speed,rotation_speed,"
-               "axial_tilt,texture,has_atmo,atmo_r,atmo_g,atmo_b,parent\n");
+    fprintf(f, "#name,distance,size,orbit_speed,rotation_speed,axial_tilt,texture,has_atmo,atmo_r,atmo_g,atmo_b,has_rings,parent\n");
 
     for (int i = 0; i < world->count; i++) {
         const Planet* p = &world->planets[i];
         const char* parent_name = (p->parent_index >= 0 && p->parent_index < world->count)
             ? world->planets[p->parent_index].name : "";
 
-        // Build texture filename from planet name (lowercase + .jpg)
-        char tex[64];
-        int j;
-        for (j = 0; p->name[j] && j < 59; j++)
-            tex[j] = (char)(p->name[j] | 32);
-        tex[j] = '\0';
-        strncat(tex, ".jpg", sizeof(tex) - strlen(tex) - 1);
-
-        fprintf(f, "%s,%.4f,%.4f,%.4f,%.4f,%.4f,%s,%d,%.2f,%.2f,%.2f,%s\n",
+        fprintf(f, "%s,%.4f,%.4f,%.4f,%.4f,%.4f,%s,%d,%.2f,%.2f,%.2f,%d,%s\n",
                 p->name, p->distance, p->size,
                 p->orbit_speed, p->rotation_speed, p->axial_tilt,
-                tex, p->has_atmosphere,
-                p->atmo_r, p->atmo_g, p->atmo_b, parent_name);
+                p->texture_name, p->has_atmosphere,
+                p->atmo_r, p->atmo_g, p->atmo_b, p->has_rings, parent_name);
     }
     fclose(f);
 }

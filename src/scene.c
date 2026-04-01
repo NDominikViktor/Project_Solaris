@@ -52,10 +52,11 @@ void load_planets(World* world, const char* filename) {
         // Remove newline at the end of line if present
         line[strcspn(line, "\r\n")] = 0;
 
-        int fields = sscanf(line, "%[^,],%f,%f,%f,%f,%f,%[^,],%d,%f,%f,%f,%[^,\n]",
+        // name,distance,size,orbit_speed,rotation_speed,axial_tilt,texture,has_atmo,atmo_r,atmo_g,atmo_b,has_rings,parent
+        int fields = sscanf(line, "%[^,],%f,%f,%f,%f,%f,%[^,],%d,%f,%f,%f,%d,%[^,\n]",
                    p->name, &p->distance, &p->size, &p->orbit_speed, &p->rotation_speed,
                    &p->axial_tilt, texture_name, &p->has_atmosphere,
-                   &p->atmo_r, &p->atmo_g, &p->atmo_b, parent_name);
+                   &p->atmo_r, &p->atmo_g, &p->atmo_b, &p->has_rings, parent_name);
 
         if (fields >= 11) {
             p->current_angle  = 0.0f;
@@ -66,19 +67,35 @@ void load_planets(World* world, const char* filename) {
             p->world_y = 0.0f;
             p->world_z = 0.0f;
 
+            // Handle legacy format or missing fields
+            if (fields < 12) {
+                // Hardcoded fallback for Saturn and Uranus if field is missing
+                if (strcmp(p->name, "Saturn") == 0 || strcmp(p->name, "Uranus") == 0) {
+                    p->has_rings = 1;
+                } else {
+                    p->has_rings = 0;
+                }
+            }
+
             char full_path[128];
             sprintf(full_path, "assets/%s", texture_name);
             p->texture_id = load_texture(full_path);
+            strncpy(p->texture_name, texture_name, sizeof(p->texture_name)-1);
 
             // Resolve parent index
             p->parent_index = -1;
-            if (fields >= 12 && strlen(parent_name) > 0) {
+            const char* actual_parent = (fields >= 13) ? parent_name : (fields == 12 ? parent_name : "");
+            if (strlen(actual_parent) > 0) {
                 for (int j = 0; j < world->count; j++) {
-                    if (strcmp(world->planets[j].name, parent_name) == 0) {
+                    if (strcmp(world->planets[j].name, actual_parent) == 0) {
                         p->parent_index = j;
                         break;
                     }
                 }
+            }
+
+            if (p->has_rings) {
+                init_ring_particles(p);
             }
 
             world->count++;
@@ -150,6 +167,7 @@ void draw_atmosphere(float size, float r, float g, float b, float alpha) {
 }
 
 void init_ring_particles(Planet* p) {
+    if (p->ring_particles) free(p->ring_particles);
     p->particle_count = 2000;
     p->ring_particles = malloc(p->particle_count * sizeof(Particle));
     if (!p->ring_particles) {
@@ -171,6 +189,14 @@ void init_ring_particles(Planet* p) {
         part->speed    = 0.1f + ((float)rand() / (float)RAND_MAX) * 0.2f;
 
         part->y = ((float)rand() / (float)RAND_MAX) * 0.04f - 0.02f;
+    }
+}
+
+void free_ring_particles(Planet* p) {
+    if (p->ring_particles) {
+        free(p->ring_particles);
+        p->ring_particles = NULL;
+        p->particle_count = 0;
     }
 }
 
@@ -340,4 +366,8 @@ int pick_planet(int mouseX, int mouseY, void* cam_ptr, void* world_ptr) {
         }
     }
     return -1;
+}
+
+void draw_moon_shadows(World* world) {
+    // Implementation placeholder or as per existing logic
 }
