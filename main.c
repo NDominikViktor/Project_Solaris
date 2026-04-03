@@ -397,7 +397,7 @@ int main(int argc, char* args[]) {
     glEnable(GL_FOG);
     float fogColor[] = {0.05f, 0.02f, 0.15f, 1.0f};
     glFogfv(GL_FOG_COLOR, fogColor);
-    glFogf(GL_FOG_DENSITY, 0.02f);
+    glFogf(GL_FOG_DENSITY, 0.06f);
     glHint(GL_FOG_HINT, GL_NICEST);
     glFogi(GL_FOG_MODE, GL_EXP2);
 
@@ -431,17 +431,60 @@ int main(int argc, char* args[]) {
                 if (event.type == SDL_MOUSEBUTTONDOWN &&
                     event.button.button == SDL_BUTTON_LEFT) {
                     int cx = event.button.x, cy = event.button.y;
+                    // Stop text input if clicking outside the name field
+                    if (editor.editing_name) {
+                        editor.editing_name = false;
+                        SDL_StopTextInput();
+                    }
                     if (cx <= PANEL_W) {
                         ui_editor_click(cx, cy, &world, &editor,
                                         win_w, win_h, &app_state);
                     } else {
                         int hit = pick_planet(cx - PANEL_W, cy, &camera, &world);
-                        if (hit != -1) editor.selected = hit;
+                        if (hit != -1) {
+                            editor.selected = hit;
+                            // Sync texture selector
+                            for (int t = 0; t < TEXTURE_COUNT; t++) {
+                                if (strcmp(world.planets[hit].texture_name,
+                                           TEXTURE_FILES[t]) == 0) {
+                                    editor.selected_texture = t;
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
-                if (event.type == SDL_KEYDOWN &&
-                    event.key.keysym.sym == SDLK_ESCAPE)
-                    app_state = STATE_MENU;
+                // Text input for planet name
+                if (editor.editing_name) {
+                    if (event.type == SDL_TEXTINPUT &&
+                        editor.selected >= 0 && editor.selected < world.count) {
+                        char* nm = world.planets[editor.selected].name;
+                        if (strlen(nm) < 30)
+                            strncat(nm, event.text.text, 30 - strlen(nm));
+                    }
+                    if (event.type == SDL_KEYDOWN) {
+                        if (event.key.keysym.sym == SDLK_BACKSPACE &&
+                            editor.selected >= 0 && editor.selected < world.count) {
+                            char* nm = world.planets[editor.selected].name;
+                            int len = (int)strlen(nm);
+                            if (len > 0) nm[len-1] = '\0';
+                        }
+                        if (event.key.keysym.sym == SDLK_RETURN ||
+                            event.key.keysym.sym == SDLK_KP_ENTER) {
+                            editor.editing_name = false;
+                            SDL_StopTextInput();
+                        }
+                        if (event.key.keysym.sym == SDLK_ESCAPE) {
+                            editor.editing_name = false;
+                            SDL_StopTextInput();
+                            app_state = STATE_MENU;
+                        }
+                    }
+                } else {
+                    if (event.type == SDL_KEYDOWN &&
+                        event.key.keysym.sym == SDLK_ESCAPE)
+                        app_state = STATE_MENU;
+                }
                 continue;
             }
 

@@ -369,5 +369,101 @@ int pick_planet(int mouseX, int mouseY, void* cam_ptr, void* world_ptr) {
 }
 
 void draw_moon_shadows(World* world) {
-    // Implementation placeholder or as per existing logic
+    // For each moon: project a soft shadow disc onto the parent planet surface.
+    // The shadow position is found by intersecting the Sun->moon ray with the
+    // parent sphere. Only draws if the moon is actually between the Sun and planet.
+
+    glDisable(GL_LIGHTING);
+    glDisable(GL_TEXTURE_2D);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_FALSE);
+
+    for (int i = 0; i < world->count; i++) {
+        Planet* moon = &world->planets[i];
+        if (moon->parent_index < 0) continue;
+        Planet* parent = &world->planets[moon->parent_index];
+        // Skip if parent is the Sun (distance ~0, no parent)
+        if (parent->parent_index < 0 && parent->distance < 0.1f) continue;
+
+        // Sun is at world origin.
+        // Ray from Sun through moon: origin=0, dir = normalize(moon_pos)
+        float mx = moon->world_x, my = moon->world_y, mz = moon->world_z;
+        float md = sqrtf(mx*mx + my*my + mz*mz);
+        if (md < 0.001f) continue;
+        float dx = mx/md, dy = my/md, dz = mz/md;
+
+        // Intersect this ray with the parent sphere.
+        // Ray: P(t) = t * (dx,dy,dz)
+        // Sphere: |P - C|^2 = R^2   where C = parent centre
+        float cx = parent->world_x, cy = parent->world_y, cz = parent->world_z;
+        float R  = parent->size;
+
+        // Quadratic: t^2 - 2t(d.C) + (|C|^2 - R^2) = 0
+        float b2 = dx*cx + dy*cy + dz*cz;   // half b
+        float c  = cx*cx + cy*cy + cz*cz - R*R;
+        float disc = b2*b2 - c;
+        if (disc < 0) continue;             // ray misses planet
+
+        // We want the intersection closer to the Sun (smaller t)
+        float t = b2 - sqrtf(disc);
+        if (t < 0) t = b2 + sqrtf(disc);
+        if (t < 0) continue;
+
+        // Shadow only makes sense if the moon is farther from Sun than the hit point
+        // i.e. the moon is on the far side (past the planet from the Sun)
+        if (t > md) continue;
+
+        // Shadow centre on the sphere
+        float sx2 = t*dx, sy2 = t*dy, sz2 = t*dz;
+
+        // Normal at shadow centre (pointing outward from planet centre)
+        float nx = sx2 - cx, ny = sy2 - cy, nz = sz2 - cz;
+        float nl = sqrtf(nx*nx + ny*ny + nz*nz);
+        if (nl < 0.001f) continue;
+        nx /= nl; ny /= nl; nz /= nl;
+
+        // Push slightly above surface to avoid z-fighting
+        float ox = sx2 + nx * 0.02f;
+        float oy = sy2 + ny * 0.02f;
+        float oz = sz2 + nz * 0.02f;
+
+        // Build two tangent vectors for the disc
+        float ux = 0.0f, uy = 1.0f, uz = 0.0f;
+        if (fabsf(ny) > 0.9f) { ux = 1.0f; uy = 0.0f; }
+        // tangent1 = cross(normal, up)
+        float t1x = ny*uz - nz*uy, t1y = nz*ux - nx*uz, t1z = nx*uy - ny*ux;
+        float t1l = sqrtf(t1x*t1x + t1y*t1y + t1z*t1z);
+        if (t1l < 0.001f) continue;
+        t1x /= t1l; t1y /= t1l; t1z /= t1l;
+        // tangent2 = cross(normal, tangent1)
+        float t2x = ny*t1z - nz*t1y;
+        float t2y = nz*t1x - nx*t1z;
+        float t2z = nx*t1y - ny*t1x;
+
+        // Shadow radius scales with moon size; fade over 3 soft layers
+        float base_r = moon->size * 0.85f;
+        int   steps  = 40;
+
+        for (int layer = 2; layer >= 0; layer--) {
+            float lr    = base_r * (1.0f + layer * 0.5f);
+            float alpha = 0.50f * (1.0f - layer * 0.30f);
+            glColor4f(0.0f, 0.0f, 0.0f, alpha);
+            glBegin(GL_TRIANGLE_FAN);
+            glVertex3f(ox, oy, oz);
+            for (int s = 0; s <= steps; s++) {
+                float a  = s * 2.0f * (float)M_PI / steps;
+                float px = ox + lr * (cosf(a)*t1x + sinf(a)*t2x);
+                float py = oy + lr * (cosf(a)*t1y + sinf(a)*t2y);
+                float pz = oz + lr * (cosf(a)*t1z + sinf(a)*t2z);
+                glVertex3f(px, py, pz);
+            }
+            glEnd();
+        }
+    }
+
+    glDepthMask(GL_TRUE);
+    glEnable(GL_LIGHTING);
+    glDisable(GL_BLEND);
+    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 }
