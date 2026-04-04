@@ -48,6 +48,7 @@ typedef struct {
     float ring_r, ring_g, ring_b; /**< Ring particle colour (RGB, 0-1). */
     float ring_inner;             /**< Inner radius multiplier (relative to size). Default 1.3. */
     float ring_outer;             /**< Outer radius multiplier (relative to size). Default 2.1. */
+    float ring_tilt;              /**< Ring tilt in degrees. */
     Particle* ring_particles;     /**< Heap-allocated ring particle array, or NULL. */
     int   particle_count;         /**< Number of elements in ring_particles. */
     int   parent_index;           /**< Index of parent in World.planets, or -1 for root. */

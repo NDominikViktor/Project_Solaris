@@ -38,6 +38,7 @@ typedef struct {
     int  selected_texture;
     bool editing_name;
     EditorTab active_tab;    /**< Current tab in the editor. */
+    float scroll_y;          /**< Scroll offset for the properties panel. */
 } EditorState;
 
 #define TEXTURE_COUNT 12
