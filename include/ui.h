@@ -25,12 +25,19 @@ typedef struct {
     bool hovered;
 } Button;
 
+/** @brief Which section of the editor is currently expanded. */
+typedef enum {
+    EDITOR_TAB_BASIC = 0, /**< Name, type, parent, size, distance, speed. */
+    EDITOR_TAB_VISUAL,    /**< Texture, atmosphere, rings. */
+} EditorTab;
+
 /** @brief Runtime state for the editor panel. */
 typedef struct {
     int  selected;           /**< Index of the selected planet, or -1. */
     char new_name[32];
     int  selected_texture;
     bool editing_name;
+    EditorTab active_tab;    /**< Current tab in the editor. */
 } EditorState;
 
 #define TEXTURE_COUNT 12

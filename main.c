@@ -118,7 +118,7 @@ void draw_orbit_paths(World* world) {
     for (int i = 0; i < world->count; i++) {
         Planet* p = &world->planets[i];
 
-        if (p->distance < 0.1f && p->parent_index == -1) continue;
+        if (p->obj_type == OBJ_STAR) continue;
 
         float cx = 0.0f, cz = 0.0f;
         if (p->parent_index != -1) {
@@ -431,60 +431,17 @@ int main(int argc, char* args[]) {
                 if (event.type == SDL_MOUSEBUTTONDOWN &&
                     event.button.button == SDL_BUTTON_LEFT) {
                     int cx = event.button.x, cy = event.button.y;
-                    // Stop text input if clicking outside the name field
-                    if (editor.editing_name) {
-                        editor.editing_name = false;
-                        SDL_StopTextInput();
-                    }
                     if (cx <= PANEL_W) {
                         ui_editor_click(cx, cy, &world, &editor,
                                         win_w, win_h, &app_state);
                     } else {
                         int hit = pick_planet(cx - PANEL_W, cy, &camera, &world);
-                        if (hit != -1) {
-                            editor.selected = hit;
-                            // Sync texture selector
-                            for (int t = 0; t < TEXTURE_COUNT; t++) {
-                                if (strcmp(world.planets[hit].texture_name,
-                                           TEXTURE_FILES[t]) == 0) {
-                                    editor.selected_texture = t;
-                                    break;
-                                }
-                            }
-                        }
+                        if (hit != -1) editor.selected = hit;
                     }
                 }
-                // Text input for planet name
-                if (editor.editing_name) {
-                    if (event.type == SDL_TEXTINPUT &&
-                        editor.selected >= 0 && editor.selected < world.count) {
-                        char* nm = world.planets[editor.selected].name;
-                        if (strlen(nm) < 30)
-                            strncat(nm, event.text.text, 30 - strlen(nm));
-                    }
-                    if (event.type == SDL_KEYDOWN) {
-                        if (event.key.keysym.sym == SDLK_BACKSPACE &&
-                            editor.selected >= 0 && editor.selected < world.count) {
-                            char* nm = world.planets[editor.selected].name;
-                            int len = (int)strlen(nm);
-                            if (len > 0) nm[len-1] = '\0';
-                        }
-                        if (event.key.keysym.sym == SDLK_RETURN ||
-                            event.key.keysym.sym == SDLK_KP_ENTER) {
-                            editor.editing_name = false;
-                            SDL_StopTextInput();
-                        }
-                        if (event.key.keysym.sym == SDLK_ESCAPE) {
-                            editor.editing_name = false;
-                            SDL_StopTextInput();
-                            app_state = STATE_MENU;
-                        }
-                    }
-                } else {
-                    if (event.type == SDL_KEYDOWN &&
-                        event.key.keysym.sym == SDLK_ESCAPE)
-                        app_state = STATE_MENU;
-                }
+                if (event.type == SDL_KEYDOWN &&
+                    event.key.keysym.sym == SDLK_ESCAPE)
+                    app_state = STATE_MENU;
                 continue;
             }
 
@@ -629,7 +586,7 @@ int main(int argc, char* args[]) {
             GLUquadric* quad = gluNewQuadric();
             gluQuadricTexture(quad, GL_TRUE);
 
-            if (p->distance < 0.1f && p->parent_index == -1) {
+            if (p->obj_type == OBJ_STAR) {
                 glDisable(GL_LIGHTING);
                 glEnable(GL_TEXTURE_2D);
                 glBindTexture(GL_TEXTURE_2D, p->texture_id);
@@ -669,7 +626,8 @@ int main(int argc, char* args[]) {
                         }
                     }
                     glPushMatrix();
-                    if (strcmp(p->name,"Uranus")==0) glRotatef(97.0f,1,0,0);
+                    // Tilt the ring to match axial tilt for planets with extreme tilt (>45 degrees)
+                    if (p->axial_tilt > 45.0f) glRotatef(p->axial_tilt, 1,0,0);
                     draw_ring_particles(p);
                     glPopMatrix();
                 }

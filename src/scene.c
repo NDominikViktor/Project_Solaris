@@ -52,11 +52,16 @@ void load_planets(World* world, const char* filename) {
         // Remove newline at the end of line if present
         line[strcspn(line, "\r\n")] = 0;
 
-        // name,distance,size,orbit_speed,rotation_speed,axial_tilt,texture,has_atmo,atmo_r,atmo_g,atmo_b,has_rings,parent
-        int fields = sscanf(line, "%[^,],%f,%f,%f,%f,%f,%[^,],%d,%f,%f,%f,%d,%[^,\n]",
+        // name,distance,size,orbit,rotation,tilt,tex,atmo,ar,ag,ab,rings,rr,rg,rb,ri,ro,type,parent
+        int obj_type_int = 0;
+        int fields = sscanf(line,
+                   "%[^,],%f,%f,%f,%f,%f,%[^,],%d,%f,%f,%f,%d,%f,%f,%f,%f,%f,%d,%[^,\n]",
                    p->name, &p->distance, &p->size, &p->orbit_speed, &p->rotation_speed,
                    &p->axial_tilt, texture_name, &p->has_atmosphere,
-                   &p->atmo_r, &p->atmo_g, &p->atmo_b, &p->has_rings, parent_name);
+                   &p->atmo_r, &p->atmo_g, &p->atmo_b, &p->has_rings,
+                   &p->ring_r, &p->ring_g, &p->ring_b,
+                   &p->ring_inner, &p->ring_outer,
+                   &obj_type_int, parent_name);
 
         if (fields >= 11) {
             p->current_angle  = 0.0f;
@@ -67,14 +72,19 @@ void load_planets(World* world, const char* filename) {
             p->world_y = 0.0f;
             p->world_z = 0.0f;
 
-            // Handle legacy format or missing fields
+            // Legacy: missing has_rings
             if (fields < 12) {
-                // Hardcoded fallback for Saturn and Uranus if field is missing
-                if (strcmp(p->name, "Saturn") == 0 || strcmp(p->name, "Uranus") == 0) {
-                    p->has_rings = 1;
-                } else {
-                    p->has_rings = 0;
-                }
+                p->has_rings = 0; // No rings by default in legacy format
+            }
+            // Legacy: missing ring colour / size
+            if (fields < 15) { p->ring_r = 0.0f; p->ring_g = 0.0f; p->ring_b = 0.0f; }
+            if (fields < 17) { p->ring_inner = 1.3f; p->ring_outer = 2.1f; }
+            // Legacy: missing obj_type
+            if (fields < 18) {
+                if (p->distance < 0.1f) p->obj_type = OBJ_STAR;
+                else                    p->obj_type = OBJ_PLANET;
+            } else {
+                p->obj_type = (ObjectType)obj_type_int;
             }
 
             char full_path[128];
@@ -84,7 +94,7 @@ void load_planets(World* world, const char* filename) {
 
             // Resolve parent index
             p->parent_index = -1;
-            const char* actual_parent = (fields >= 13) ? parent_name : (fields == 12 ? parent_name : "");
+            const char* actual_parent = (fields >= 19) ? parent_name : "";
             if (strlen(actual_parent) > 0) {
                 for (int j = 0; j < world->count; j++) {
                     if (strcmp(world->planets[j].name, actual_parent) == 0) {
@@ -176,19 +186,18 @@ void init_ring_particles(Planet* p) {
         return;
     }
 
-    float inner = (strcmp(p->name, "Uranus") == 0) ? 1.5f : 1.3f;
-    float outer = (strcmp(p->name, "Uranus") == 0) ? 1.7f : 2.1f;
+    // Use per-planet inner/outer multipliers; fall back to sensible defaults
+    float inner = (p->ring_inner > 0.01f) ? p->ring_inner : 1.3f;
+    float outer = (p->ring_outer > 0.01f) ? p->ring_outer : 2.1f;
 
     for (int i = 0; i < p->particle_count; i++) {
         Particle* part = &p->ring_particles[i];
-
         part->angle    = (float)(rand() % 360);
         float r        = ((float)rand() / (float)RAND_MAX) * (outer - inner) + inner;
         part->distance = p->size * r;
         part->size     = 0.02f;
         part->speed    = 0.1f + ((float)rand() / (float)RAND_MAX) * 0.2f;
-
-        part->y = ((float)rand() / (float)RAND_MAX) * 0.04f - 0.02f;
+        part->y        = ((float)rand() / (float)RAND_MAX) * 0.04f - 0.02f;
     }
 }
 
@@ -209,7 +218,13 @@ void draw_ring_particles(Planet* p) {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glPointSize(2.0f);
 
-    int is_uranus = (strcmp(p->name, "Uranus") == 0);
+    // Use per-planet ring colour; fall back to golden Saturn default
+    float rr = (p->ring_r > 0.001f || p->ring_g > 0.001f || p->ring_b > 0.001f)
+               ? p->ring_r : 0.9f;
+    float rg = (p->ring_r > 0.001f || p->ring_g > 0.001f || p->ring_b > 0.001f)
+               ? p->ring_g : 0.80f;
+    float rb = (p->ring_r > 0.001f || p->ring_g > 0.001f || p->ring_b > 0.001f)
+               ? p->ring_b : 0.55f;
 
     glBegin(GL_POINTS);
     for (int i = 0; i < p->particle_count; i++) {
@@ -217,12 +232,7 @@ void draw_ring_particles(Planet* p) {
         float rad = part->angle * (float)M_PI / 180.0f;
         float px  = cosf(rad) * part->distance;
         float pz  = sinf(rad) * part->distance;
-
-        if (is_uranus)
-            glColor4f(0.75f, 0.85f, 0.9f, 0.55f);
-        else
-            glColor4f(0.9f, 0.80f, 0.55f, 0.65f);
-
+        glColor4f(rr, rg, rb, 0.65f);
         glVertex3f(px, part->y, pz);
     }
     glEnd();

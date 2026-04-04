@@ -278,187 +278,283 @@ void ui_menu_hover(int x, int y, Button btns[3]) {
 
 #define PANEL_W 340.0f
 
+
+// ── Editor panel ─────────────────────────────────────────────────────────────
+
+#define PANEL_W 340.0f
+
+// ── Layout constants (shared between draw and click) ─────────────────────────
+// These must be identical in both functions — single source of truth.
+static float editor_list_y(void)       { return 74.0f; }
+static float editor_btn1_y(World* w)   { return editor_list_y() + w->count * 26.0f + 8.0f; }
+static float editor_btn2_y(World* w)   { return editor_btn1_y(w) + 30.0f; }
+static float editor_tab_y(World* w)    { return editor_btn2_y(w) + 30.0f; }
+static float editor_props_y(World* w)  { return editor_tab_y(w) + 32.0f; }
+
+// ── Type label ───────────────────────────────────────────────────────────────
+static const char* obj_type_label(ObjectType t) {
+    if (t == OBJ_STAR)  return "Star";
+    if (t == OBJ_MOON)  return "Moon";
+    return "Planet";
+}
+
 void ui_draw_editor(TTF_Font* font, World* world, EditorState* es,
                     int win_w, int win_h) {
     begin_2d(win_w, win_h);
 
     // Panel background
-    gl_fill_rect(0, 0, PANEL_W, (float)win_h, 0.04f, 0.05f, 0.11f, 0.92f);
+    gl_fill_rect(0, 0, PANEL_W, (float)win_h, 0.04f, 0.05f, 0.11f, 0.93f);
     gl_draw_rect(0, 0, PANEL_W, (float)win_h, 0.20f, 0.27f, 0.51f, 1.0f);
 
-    if (font)
-        ui_draw_text(font, "Planet Editor", 14, 12,
-                     0.31f, 0.63f, 1.0f, 1.0f, win_w, win_h);
+    if (font) ui_draw_text(font, "Planet Editor", 14, 12,
+                           0.31f, 0.63f, 1.0f, 1.0f, win_w, win_h);
 
-    // Planet list
-    float list_y = 50.0f;
-    if (font)
-        ui_draw_text(font, "Planets:", 14, list_y,
-                     0.51f, 0.51f, 0.59f, 1.0f, win_w, win_h);
+    // ── Planet list ───────────────────────────────────────────────────────────
+    float list_y = editor_list_y();
+    if (font) ui_draw_text(font, "Objects:", 14, list_y,
+                           0.51f, 0.51f, 0.59f, 1.0f, win_w, win_h);
     list_y += 24.0f;
 
     for (int i = 0; i < world->count; i++) {
         float ry = list_y + i * 26.0f;
         if (i == es->selected) {
-            gl_fill_rect(8, ry, PANEL_W - 16, 24, 0.12f, 0.24f, 0.47f, 0.9f);
-            gl_draw_rect(8, ry, PANEL_W - 16, 24, 0.31f, 0.55f, 1.0f, 0.8f);
+            gl_fill_rect(8, ry, PANEL_W-16, 24, 0.12f, 0.24f, 0.47f, 0.9f);
+            gl_draw_rect(8, ry, PANEL_W-16, 24, 0.31f, 0.55f, 1.0f, 0.8f);
         }
-        float tc = (i == es->selected) ? 1.0f : 0.86f;
-        float tg = (i == es->selected) ? 0.78f : 0.86f;
-        if (font)
-            ui_draw_text(font, world->planets[i].name, 16, ry + 4,
-                         0.31f * (1 - tc) + tc, tg, 1.0f * tc + 0.86f * (1 - tc),
-                         1.0f, win_w, win_h);
+        // Type indicator colour
+        Planet* pi = &world->planets[i];
+        float ir = (pi->obj_type==OBJ_STAR) ? 1.0f : (pi->obj_type==OBJ_MOON) ? 0.6f : 0.55f;
+        float ig = (pi->obj_type==OBJ_STAR) ? 0.85f: (pi->obj_type==OBJ_MOON) ? 0.6f : 0.78f;
+        float ib = (pi->obj_type==OBJ_STAR) ? 0.20f: (pi->obj_type==OBJ_MOON) ? 0.7f : 1.0f;
+        char row_label[48];
+        snprintf(row_label, sizeof(row_label), "[%s] %s",
+                 obj_type_label(pi->obj_type), pi->name);
+        if (font) ui_draw_text(font, row_label, 16, ry+4,
+                               ir, ig, ib, 1.0f, win_w, win_h);
     }
 
-    float after_list = list_y + world->count * 26.0f + 8.0f;
-
-    // Row 1: Add / Delete / Back
-    float btn_y = after_list;
-    gl_fill_rect(8,           btn_y, 90, 26, 0.12f, 0.31f, 0.16f, 0.9f);
-    gl_draw_rect(8,           btn_y, 90, 26, 0.24f, 0.71f, 0.31f, 1.0f);
-    if (font) draw_text_centered(font, "Add",    8,           btn_y, 90, 26, 0.31f, 0.78f, 0.39f, 1.0f, win_w, win_h);
-    gl_fill_rect(106,         btn_y, 90, 26, 0.31f, 0.08f, 0.08f, 0.9f);
-    gl_draw_rect(106,         btn_y, 90, 26, 0.78f, 0.24f, 0.24f, 1.0f);
-    if (font) draw_text_centered(font, "Delete", 106,         btn_y, 90, 26, 0.86f, 0.31f, 0.31f, 1.0f, win_w, win_h);
-    gl_fill_rect(PANEL_W-98,  btn_y, 90, 26, 0.08f, 0.12f, 0.24f, 0.9f);
-    gl_draw_rect(PANEL_W-98,  btn_y, 90, 26, 0.24f, 0.31f, 0.55f, 1.0f);
-    if (font) draw_text_centered(font, "< Menu", PANEL_W-98,  btn_y, 90, 26, 0.86f, 0.86f, 0.86f, 1.0f, win_w, win_h);
-    // Row 2: New System / Load Default
-    float btn_y2 = btn_y + 30.0f;
+    float btn1_y = editor_btn1_y(world);
+    float btn2_y = editor_btn2_y(world);
     float half_w = (PANEL_W - 24.0f) / 2.0f;
-    gl_fill_rect(8,            btn_y2, half_w, 24, 0.20f, 0.10f, 0.30f, 0.9f);
-    gl_draw_rect(8,            btn_y2, half_w, 24, 0.60f, 0.30f, 0.90f, 1.0f);
-    if (font) draw_text_centered(font, "New System",  8,           btn_y2, half_w, 24, 0.80f, 0.60f, 1.0f, 1.0f, win_w, win_h);
-    gl_fill_rect(16+half_w,    btn_y2, half_w, 24, 0.08f, 0.18f, 0.28f, 0.9f);
-    gl_draw_rect(16+half_w,    btn_y2, half_w, 24, 0.24f, 0.50f, 0.78f, 1.0f);
-    if (font) draw_text_centered(font, "Load Default", 16+half_w,  btn_y2, half_w, 24, 0.60f, 0.80f, 1.0f, 1.0f, win_w, win_h);
 
-    // Property sliders
+    // ── Row 1: Add / Delete / Back ────────────────────────────────────────────
+    gl_fill_rect(8,          btn1_y, 90, 26, 0.12f,0.31f,0.16f,0.9f);
+    gl_draw_rect(8,          btn1_y, 90, 26, 0.24f,0.71f,0.31f,1.0f);
+    if (font) draw_text_centered(font,"Add",   8,         btn1_y,90,26,0.31f,0.78f,0.39f,1.0f,win_w,win_h);
+
+    gl_fill_rect(106,        btn1_y, 90, 26, 0.31f,0.08f,0.08f,0.9f);
+    gl_draw_rect(106,        btn1_y, 90, 26, 0.78f,0.24f,0.24f,1.0f);
+    if (font) draw_text_centered(font,"Delete",106,       btn1_y,90,26,0.86f,0.31f,0.31f,1.0f,win_w,win_h);
+
+    gl_fill_rect(PANEL_W-98, btn1_y, 90, 26, 0.08f,0.12f,0.24f,0.9f);
+    gl_draw_rect(PANEL_W-98, btn1_y, 90, 26, 0.24f,0.31f,0.55f,1.0f);
+    if (font) draw_text_centered(font,"< Menu",PANEL_W-98,btn1_y,90,26,0.86f,0.86f,0.86f,1.0f,win_w,win_h);
+
+    // ── Row 2: New System / Load Default ─────────────────────────────────────
+    gl_fill_rect(8,          btn2_y, half_w, 24, 0.20f,0.10f,0.30f,0.9f);
+    gl_draw_rect(8,          btn2_y, half_w, 24, 0.60f,0.30f,0.90f,1.0f);
+    if (font) draw_text_centered(font,"New System", 8,        btn2_y,half_w,24,0.80f,0.60f,1.0f,1.0f,win_w,win_h);
+
+    gl_fill_rect(16+half_w,  btn2_y, half_w, 24, 0.08f,0.18f,0.28f,0.9f);
+    gl_draw_rect(16+half_w,  btn2_y, half_w, 24, 0.24f,0.50f,0.78f,1.0f);
+    if (font) draw_text_centered(font,"Load Default",16+half_w,btn2_y,half_w,24,0.60f,0.80f,1.0f,1.0f,win_w,win_h);
+
+    // ── No selection ─────────────────────────────────────────────────────────
     if (es->selected < 0 || es->selected >= world->count) { end_2d(); return; }
 
     Planet* p = &world->planets[es->selected];
     float sx = 14.0f, sw = PANEL_W - 28.0f;
-    float sy = btn_y + 70.0f;   // btn_y + row1(26) + row2(24) + padding(20)
+    float tab_y   = editor_tab_y(world);
+    float props_y = editor_props_y(world);
 
-    // Planet name — editable text field
-    {
-        float field_col_r = es->editing_name ? 0.10f : 0.06f;
-        float field_col_g = es->editing_name ? 0.16f : 0.08f;
-        float field_col_b = es->editing_name ? 0.28f : 0.14f;
-        gl_fill_rect(sx, sy, sw, 24, field_col_r, field_col_g, field_col_b, 0.9f);
-        float bdr = es->editing_name ? 0.31f : 0.20f;
-        float bdg = es->editing_name ? 0.63f : 0.27f;
-        float bdb = es->editing_name ? 1.00f : 0.51f;
-        gl_draw_rect(sx, sy, sw, 24, bdr, bdg, bdb, 1.0f);
-        // Show name + cursor when editing
-        char display[36];
-        if (es->editing_name) {
-            snprintf(display, sizeof(display), "%s|", p->name);
-        } else {
-            snprintf(display, sizeof(display), "%s  (click to rename)", p->name);
-        }
-        if (font) ui_draw_text(font, display, sx + 4, sy + 4,
-                               0.31f, 0.63f, 1.0f, 1.0f, win_w, win_h);
-    }
-    sy += 32.0f;
-
-    p->size          = draw_slider(font, sx, sy, sw, "Size",         p->size,          0.1f,  3.0f,  win_w, win_h); sy += 44.0f;
-    p->distance      = draw_slider(font, sx, sy, sw, "Distance",     p->distance,      0.0f, 60.0f,  win_w, win_h); sy += 44.0f;
-    p->orbit_speed   = draw_slider(font, sx, sy, sw, "Orbit speed",  p->orbit_speed,   0.0f,  0.5f,  win_w, win_h); sy += 44.0f;
-    p->rotation_speed= draw_slider(font, sx, sy, sw, "Rotation",     p->rotation_speed,0.0f,  2.0f,  win_w, win_h); sy += 44.0f;
-    p->axial_tilt    = draw_slider(font, sx, sy, sw, "Axial tilt",   p->axial_tilt,    0.0f,180.0f,  win_w, win_h); sy += 44.0f;
-
-    // Rings toggle button
-    {
-        float btn_fill_r = p->has_rings ? 0.12f : 0.08f;
-        float btn_fill_g = p->has_rings ? 0.31f : 0.09f;
-        float btn_fill_b = p->has_rings ? 0.16f : 0.19f;
-        gl_fill_rect(sx, sy, sw, 26, btn_fill_r, btn_fill_g, btn_fill_b, 0.9f);
-        float btn_br = p->has_rings ? 0.24f : 0.31f;
-        float btn_bg = p->has_rings ? 0.71f : 0.55f;
-        float btn_bb = p->has_rings ? 0.31f : 0.86f;
-        gl_draw_rect(sx, sy, sw, 26, btn_br, btn_bg, btn_bb, 1.0f);
-        char ring_buf[32];
-        snprintf(ring_buf, sizeof(ring_buf), "Rings: %s  (click to toggle)", p->has_rings ? "ON" : "OFF");
-        if (font) draw_text_centered(font, ring_buf, sx, sy, sw, 26,
-                                     p->has_rings ? 0.31f : 0.51f,
-                                     p->has_rings ? 0.78f : 0.51f,
-                                     p->has_rings ? 0.39f : 0.59f,
+    // ── Tabs: Basic | Visual ──────────────────────────────────────────────────
+    float tab_w = (sw - 4.0f) / 2.0f;
+    for (int t = 0; t < 2; t++) {
+        float tx = sx + t * (tab_w + 4.0f);
+        int active = (es->active_tab == t);
+        gl_fill_rect(tx, tab_y, tab_w, 28,
+                     active ? 0.14f : 0.06f,
+                     active ? 0.28f : 0.08f,
+                     active ? 0.55f : 0.18f, 0.95f);
+        gl_draw_rect(tx, tab_y, tab_w, 28,
+                     active ? 0.31f : 0.20f,
+                     active ? 0.63f : 0.27f,
+                     active ? 1.00f : 0.51f, 1.0f);
+        const char* tab_label = (t == 0) ? "Basic" : "Visual";
+        if (font) draw_text_centered(font, tab_label, tx, tab_y, tab_w, 28,
+                                     active ? 0.31f : 0.51f,
+                                     active ? 0.63f : 0.51f,
+                                     active ? 1.00f : 0.59f,
                                      1.0f, win_w, win_h);
     }
-    sy += 34.0f;
 
-    // Texture picker
-    if (font) ui_draw_text(font, "Texture:", sx, sy, 0.51f, 0.51f, 0.59f, 1.0f, win_w, win_h);
-    sy += 22.0f;
+    float sy = props_y;
 
-    int tx_cols = 4;
-    float tx_w = (sw - (tx_cols - 1) * 4.0f) / tx_cols;
-    float tx_h = 20.0f;
+    // ════════════════════════════════════════════════════════════════════════
+    if (es->active_tab == EDITOR_TAB_BASIC) {
+    // ════════════════════════════════════════════════════════════════════════
 
-    for (int i = 0; i < TEXTURE_COUNT; i++) {
-        float col = (float)(i % tx_cols);
-        float row = (float)(i / tx_cols);
-        float tx = sx + col * (tx_w + 4);
-        float ty = sy + row * (tx_h + 4);
+        // Name field
+        {
+            gl_fill_rect(sx, sy, sw, 24,
+                         es->editing_name ? 0.10f:0.06f,
+                         es->editing_name ? 0.16f:0.08f,
+                         es->editing_name ? 0.28f:0.14f, 0.9f);
+            gl_draw_rect(sx, sy, sw, 24,
+                         es->editing_name ? 0.31f:0.20f,
+                         es->editing_name ? 0.63f:0.27f,
+                         es->editing_name ? 1.00f:0.51f, 1.0f);
+            char disp[48];
+            snprintf(disp, sizeof(disp), es->editing_name ? "%s|" : "%s  (click to rename)", p->name);
+            if (font) ui_draw_text(font, disp, sx+4, sy+4,
+                                   0.31f,0.63f,1.0f,1.0f, win_w,win_h);
+        }
+        sy += 32.0f;
 
-        if (i == es->selected_texture)
-            gl_fill_rect(tx, ty, tx_w, tx_h, 0.16f, 0.31f, 0.63f, 0.9f);
-        else
-            gl_fill_rect(tx, ty, tx_w, tx_h, 0.08f, 0.09f, 0.19f, 0.85f);
+        // Object type selector: [ Star ] [ Planet ] [ Moon ]
+        if (font) ui_draw_text(font, "Type:", sx, sy,
+                               0.51f,0.51f,0.59f,1.0f, win_w,win_h);
+        sy += 20.0f;
+        float type_w = (sw - 8.0f) / 3.0f;
+        const char* type_labels[3] = {"Star","Planet","Moon"};
+        for (int t = 0; t < 3; t++) {
+            float tx = sx + t*(type_w+4.0f);
+            int sel = (p->obj_type == t);
+            float fr = sel ? (t==0?0.28f:t==1?0.12f:0.10f) : 0.06f;
+            float fg = sel ? (t==0?0.22f:t==1?0.24f:0.14f) : 0.08f;
+            float fb = sel ? (t==0?0.06f:t==1?0.47f:0.28f) : 0.18f;
+            gl_fill_rect(tx, sy, type_w, 26, fr,fg,fb,0.9f);
+            float br = sel ? (t==0?1.0f:t==1?0.31f:0.45f) : 0.24f;
+            float bg = sel ? (t==0?0.85f:t==1?0.55f:0.55f): 0.31f;
+            float bb = sel ? (t==0?0.20f:t==1?1.0f :0.90f) : 0.55f;
+            gl_draw_rect(tx, sy, type_w, 26, br,bg,bb,1.0f);
+            if (font) draw_text_centered(font, type_labels[t], tx,sy,type_w,26,
+                                         br,bg,bb,1.0f, win_w,win_h);
+        }
+        sy += 34.0f;
 
-        float bc = (i == es->selected_texture) ? 1.0f : 0.39f;
-        gl_draw_rect(tx, ty, tx_w, tx_h,
-                     0.31f * (1 - bc) + bc * 0.31f,
-                     0.55f * bc + 0.24f * (1 - bc),
-                     bc, 1.0f);
+        // Parent selector label
+        if (font) {
+            char par_buf[48];
+            const char* par_name = (p->parent_index >= 0 && p->parent_index < world->count)
+                ? world->planets[p->parent_index].name : "(none)";
+            snprintf(par_buf, sizeof(par_buf), "Parent: %s  < >", par_name);
+            gl_fill_rect(sx, sy, sw, 26, 0.06f,0.08f,0.18f,0.9f);
+            gl_draw_rect(sx, sy, sw, 26, 0.20f,0.27f,0.51f,1.0f);
+            ui_draw_text(font, par_buf, sx+4, sy+4,
+                         0.60f,0.80f,1.0f,1.0f, win_w,win_h);
+        }
+        sy += 34.0f;
 
-        char label[32];
-        strncpy(label, TEXTURE_FILES[i], sizeof(label) - 1);
-        label[sizeof(label) - 1] = '\0';
-        char* dot = strrchr(label, '.');
-        if (dot) *dot = '\0';
+        p->size          = draw_slider(font,sx,sy,sw,"Size",        p->size,         0.1f, 5.0f, win_w,win_h); sy+=44.0f;
+        p->distance      = draw_slider(font,sx,sy,sw,"Distance",    p->distance,     0.0f,80.0f, win_w,win_h); sy+=44.0f;
+        p->orbit_speed   = draw_slider(font,sx,sy,sw,"Orbit speed", p->orbit_speed,  0.0f, 0.5f, win_w,win_h); sy+=44.0f;
+        p->rotation_speed= draw_slider(font,sx,sy,sw,"Rotation",    p->rotation_speed,0.0f,2.0f, win_w,win_h); sy+=44.0f;
+        p->axial_tilt    = draw_slider(font,sx,sy,sw,"Axial tilt",  p->axial_tilt,   0.0f,180.0f,win_w,win_h); sy+=44.0f;
 
-        if (font)
-            ui_draw_text(font, label, tx + 2, ty + 2,
-                         i == es->selected_texture ? 0.55f : 0.51f,
-                         i == es->selected_texture ? 0.78f : 0.51f,
-                         i == es->selected_texture ? 1.0f  : 0.59f,
-                         1.0f, win_w, win_h);
+    // ════════════════════════════════════════════════════════════════════════
+    } else { // EDITOR_TAB_VISUAL
+    // ════════════════════════════════════════════════════════════════════════
+
+        // Texture picker
+        if (font) ui_draw_text(font,"Texture:",sx,sy,0.51f,0.51f,0.59f,1.0f,win_w,win_h);
+        sy += 20.0f;
+        int tx_cols=4;
+        float tx_w=(sw-(tx_cols-1)*4.0f)/tx_cols, tx_h=20.0f;
+        for (int i=0;i<TEXTURE_COUNT;i++) {
+            float col=(float)(i%tx_cols), row=(float)(i/tx_cols);
+            float tx=sx+col*(tx_w+4), ty=sy+row*(tx_h+4);
+            int sel=(i==es->selected_texture);
+            gl_fill_rect(tx,ty,tx_w,tx_h, sel?0.16f:0.08f,sel?0.31f:0.09f,sel?0.63f:0.19f,0.9f);
+            gl_draw_rect(tx,ty,tx_w,tx_h, sel?0.31f:0.20f,sel?0.55f:0.27f,sel?1.0f:0.51f,1.0f);
+            char lbl[32]; strncpy(lbl,TEXTURE_FILES[i],sizeof(lbl)-1); lbl[sizeof(lbl)-1]='\0';
+            char* dot=strrchr(lbl,'.'); if(dot)*dot='\0';
+            if (font) ui_draw_text(font,lbl,tx+2,ty+2,
+                                   sel?0.55f:0.51f,sel?0.78f:0.51f,sel?1.0f:0.59f,1.0f,win_w,win_h);
+        }
+        int tx_rows=(TEXTURE_COUNT+tx_cols-1)/tx_cols;
+        sy += tx_rows*(tx_h+4)+10.0f;
+
+        // Atmosphere toggle + colour sliders
+        {
+            int ha = p->has_atmosphere;
+            gl_fill_rect(sx,sy,sw,26, ha?0.10f:0.06f,ha?0.14f:0.08f,ha?0.28f:0.14f,0.9f);
+            gl_draw_rect(sx,sy,sw,26, ha?0.31f:0.20f,ha?0.55f:0.27f,ha?1.0f:0.51f,1.0f);
+            char atmo_buf[40];
+            snprintf(atmo_buf,sizeof(atmo_buf),"Atmosphere: %s",ha?"ON":"OFF");
+            if (font) draw_text_centered(font,atmo_buf,sx,sy,sw,26,
+                                         ha?0.55f:0.51f,ha?0.78f:0.51f,ha?1.0f:0.59f,1.0f,win_w,win_h);
+        }
+        sy += 32.0f;
+        if (p->has_atmosphere) {
+            p->atmo_r = draw_slider(font,sx,sy,sw,"Atmo R",p->atmo_r,0.0f,1.0f,win_w,win_h); sy+=40.0f;
+            p->atmo_g = draw_slider(font,sx,sy,sw,"Atmo G",p->atmo_g,0.0f,1.0f,win_w,win_h); sy+=40.0f;
+            p->atmo_b = draw_slider(font,sx,sy,sw,"Atmo B",p->atmo_b,0.0f,1.0f,win_w,win_h); sy+=40.0f;
+        }
+
+        // Rings toggle
+        {
+            int hr = p->has_rings;
+            gl_fill_rect(sx,sy,sw,26, hr?0.12f:0.08f,hr?0.31f:0.09f,hr?0.16f:0.19f,0.9f);
+            gl_draw_rect(sx,sy,sw,26, hr?0.24f:0.31f,hr?0.71f:0.55f,hr?0.31f:0.86f,1.0f);
+            char ring_buf[40];
+            snprintf(ring_buf,sizeof(ring_buf),"Rings: %s  (toggle)",hr?"ON":"OFF");
+            if (font) draw_text_centered(font,ring_buf,sx,sy,sw,26,
+                                         hr?0.31f:0.51f,hr?0.78f:0.51f,hr?0.39f:0.59f,1.0f,win_w,win_h);
+        }
+        sy += 32.0f;
+        if (p->has_rings) {
+            p->ring_r     = draw_slider(font,sx,sy,sw,"Ring R",    p->ring_r,    0.0f,1.0f, win_w,win_h); sy+=40.0f;
+            p->ring_g     = draw_slider(font,sx,sy,sw,"Ring G",    p->ring_g,    0.0f,1.0f, win_w,win_h); sy+=40.0f;
+            p->ring_b     = draw_slider(font,sx,sy,sw,"Ring B",    p->ring_b,    0.0f,1.0f, win_w,win_h); sy+=40.0f;
+            p->ring_inner = draw_slider(font,sx,sy,sw,"Ring inner",p->ring_inner,1.0f,2.0f, win_w,win_h); sy+=40.0f;
+            p->ring_outer = draw_slider(font,sx,sy,sw,"Ring outer",p->ring_outer,1.5f,3.5f, win_w,win_h); sy+=40.0f;
+            // Live update particles when sliders change
+            if (p->ring_particles) {
+                float inner=(p->ring_inner>0.01f)?p->ring_inner:1.3f;
+                float outer=(p->ring_outer>0.01f)?p->ring_outer:2.1f;
+                for (int i=0;i<p->particle_count;i++) {
+                    float r=inner+((float)rand()/(float)RAND_MAX)*(outer-inner);
+                    p->ring_particles[i].distance=p->size*r;
+                }
+            }
+        }
     }
 
-    int tx_rows = (TEXTURE_COUNT + tx_cols - 1) / tx_cols;
-    sy += tx_rows * (tx_h + 4) + 12.0f;
-
-    // Save button
-    gl_fill_rect(sx, sy, sw, 32, 0.08f, 0.24f, 0.12f, 0.9f);
-    gl_draw_rect(sx, sy, sw, 32, 0.24f, 0.78f, 0.31f, 1.0f);
-    if (font) draw_text_centered(font, "Save Custom", sx, sy, sw, 32,
-                                  0.31f, 0.78f, 0.39f, 1.0f, win_w, win_h);
+    // ── Save button (always visible at bottom) ────────────────────────────────
+    float save_y = sy + 6.0f;
+    // Clamp so it doesn't fall off screen
+    if (save_y + 32 > (float)win_h - 8) save_y = (float)win_h - 40.0f;
+    gl_fill_rect(sx, save_y, sw, 32, 0.08f,0.24f,0.12f,0.9f);
+    gl_draw_rect(sx, save_y, sw, 32, 0.24f,0.78f,0.31f,1.0f);
+    if (font) draw_text_centered(font,"Save to CSV",sx,save_y,sw,32,
+                                  0.31f,0.78f,0.39f,1.0f,win_w,win_h);
 
     end_2d();
 }
 
-// Helper: add a blank planet to the world
+// ── Helper: add a blank planet ────────────────────────────────────────────────
 static void add_blank_planet(World* world, EditorState* es) {
     if (world->count >= 20) return;
     Planet* p = &world->planets[world->count];
-    snprintf(p->name, sizeof(p->name), "NewObj%d", world->count);
-    p->distance = 10.0f; p->size = 0.5f;
-    p->orbit_speed = 0.05f; p->rotation_speed = 0.3f;
-    p->axial_tilt = 0.0f; p->has_atmosphere = 0;
-    p->atmo_r = p->atmo_g = p->atmo_b = 0.0f;
-    p->ring_particles = NULL; p->particle_count = 0;
-    p->has_rings = 0; p->parent_index = 0;
-    p->world_x = p->world_y = p->world_z = 0.0f;
-    p->current_angle = p->rotation_angle = 0.0f;
-    strncpy(p->texture_name, TEXTURE_FILES[es->selected_texture], sizeof(p->texture_name)-1);
+    snprintf(p->name,sizeof(p->name),"NewObj%d",world->count);
+    p->obj_type = OBJ_PLANET;
+    p->distance=10.0f; p->size=0.5f;
+    p->orbit_speed=0.05f; p->rotation_speed=0.3f; p->axial_tilt=0.0f;
+    p->has_atmosphere=0; p->atmo_r=p->atmo_g=p->atmo_b=0.0f;
+    p->has_rings=0;
+    p->ring_r=0.9f; p->ring_g=0.8f; p->ring_b=0.5f;
+    p->ring_inner=1.3f; p->ring_outer=2.1f;
+    p->ring_particles=NULL; p->particle_count=0;
+    p->parent_index=0;
+    p->world_x=p->world_y=p->world_z=0.0f;
+    p->current_angle=p->rotation_angle=0.0f;
+    strncpy(p->texture_name,TEXTURE_FILES[es->selected_texture],sizeof(p->texture_name)-1);
     char path[128];
-    snprintf(path, sizeof(path), "assets/%s", p->texture_name);
+    snprintf(path,sizeof(path),"assets/%s",p->texture_name);
     extern GLuint load_texture(const char*);
-    p->texture_id = load_texture(path);
-    es->selected = world->count++;
+    p->texture_id=load_texture(path);
+    es->selected=world->count++;
 }
 
 void ui_editor_click(int x, int y, World* world, EditorState* es,
@@ -466,163 +562,171 @@ void ui_editor_click(int x, int y, World* world, EditorState* es,
     (void)win_w; (void)win_h;
     if ((float)x > PANEL_W) return;
 
-    // ── Layout constants (must match ui_draw_editor exactly) ────────────────
-    float list_y     = 74.0f;
-    float after_list = list_y + world->count * 26.0f + 8.0f;
-    float btn_y      = after_list;
-    float btn_y2     = btn_y + 30.0f;
-    float half_w     = (PANEL_W - 24.0f) / 2.0f;
+    float list_y  = editor_list_y();
+    float btn1_y  = editor_btn1_y(world);
+    float btn2_y  = editor_btn2_y(world);
+    float tab_y   = editor_tab_y(world);
+    float props_y = editor_props_y(world);
+    float half_w  = (PANEL_W - 24.0f) / 2.0f;
     float sx = 14.0f, sw = PANEL_W - 28.0f;
-    // sliders start here (must match draw)
-    float sy = btn_y + 70.0f;
 
-    // ── Planet list ───────────────────────────────────────────────────────────
-    for (int i = 0; i < world->count; i++) {
-        float ry = list_y + i * 26.0f;
-        if ((float)y >= ry && (float)y < ry + 26.0f) {
-            es->selected = i;
-            // sync texture selector to current planet
-            for (int t = 0; t < TEXTURE_COUNT; t++) {
-                if (strcmp(world->planets[i].texture_name, TEXTURE_FILES[t]) == 0) {
-                    es->selected_texture = t; break;
-                }
+    // Planet list
+    for (int i=0;i<world->count;i++) {
+        float ry = list_y + i*26.0f;
+        if ((float)y>=ry && (float)y<ry+26.0f) {
+            es->selected=i;
+            for (int t=0;t<TEXTURE_COUNT;t++)
+                if (strcmp(world->planets[i].texture_name,TEXTURE_FILES[t])==0)
+                { es->selected_texture=t; break; }
+            return;
+        }
+    }
+
+    // Row 1: Add / Delete / Back
+    if ((float)x>=8&&(float)x<=98&&(float)y>=btn1_y&&(float)y<=btn1_y+26)
+        { add_blank_planet(world,es); return; }
+    if ((float)x>=106&&(float)x<=196&&(float)y>=btn1_y&&(float)y<=btn1_y+26) {
+        if (es->selected>=0&&es->selected<world->count) {
+            free_ring_particles(&world->planets[es->selected]);
+            for (int i=es->selected;i<world->count-1;i++)
+                world->planets[i]=world->planets[i+1];
+            world->count--;
+            if (es->selected>=world->count) es->selected=world->count-1;
+        }
+        return;
+    }
+    if ((float)x>=PANEL_W-98&&(float)x<=PANEL_W-8&&(float)y>=btn1_y&&(float)y<=btn1_y+26)
+        { *state=STATE_MENU; return; }
+
+    // Row 2: New System / Load Default
+    if ((float)x>=8&&(float)x<=8+half_w&&(float)y>=btn2_y&&(float)y<=btn2_y+24) {
+        for (int i=0;i<world->count;i++) free_ring_particles(&world->planets[i]);
+        world->count=0; es->selected=-1;
+        add_blank_planet(world,es);
+        strncpy(world->planets[0].name,"Star",32);
+        world->planets[0].obj_type=OBJ_STAR;
+        world->planets[0].distance=0.0f; world->planets[0].size=2.0f;
+        world->planets[0].orbit_speed=0.0f; world->planets[0].parent_index=-1;
+        es->selected=0; return;
+    }
+    if ((float)x>=16+half_w&&(float)x<=16+half_w*2&&(float)y>=btn2_y&&(float)y<=btn2_y+24) {
+        for (int i=0;i<world->count;i++) free_ring_particles(&world->planets[i]);
+        extern void load_planets(World*,const char*);
+        load_planets(world,"assets/planets.csv");
+        es->selected=-1; return;
+    }
+
+    // Tabs
+    float tab_w=(sw-4.0f)/2.0f;
+    for (int t=0;t<2;t++) {
+        float tx=sx+t*(tab_w+4.0f);
+        if ((float)x>=tx&&(float)x<=tx+tab_w&&(float)y>=tab_y&&(float)y<=tab_y+28)
+            { es->active_tab=(EditorTab)t; return; }
+    }
+
+    if (es->selected<0||es->selected>=world->count) return;
+    Planet* p=&world->planets[es->selected];
+    float sy=props_y;
+
+    if (es->active_tab==EDITOR_TAB_BASIC) {
+        // Name field click
+        if ((float)x>=sx&&(float)x<=sx+sw&&(float)y>=sy&&(float)y<=sy+24)
+            { es->editing_name=true; SDL_StartTextInput(); return; }
+        sy+=32.0f;
+
+        // Type selector — sy+20 is where the buttons start
+        sy+=20.0f;
+        float type_w=(sw-8.0f)/3.0f;
+        for (int t=0;t<3;t++) {
+            float tx=sx+t*(type_w+4.0f);
+            if ((float)x>=tx&&(float)x<=tx+type_w&&(float)y>=sy&&(float)y<=sy+26) {
+                p->obj_type=(ObjectType)t;
+                // If switching to star: set distance=0, parent=-1
+                if (t==OBJ_STAR) { p->distance=0.0f; p->parent_index=-1; }
+                return;
+            }
+        }
+        sy+=34.0f;
+
+        // Parent selector: < and > arrows
+        if ((float)y>=sy&&(float)y<=sy+26) {
+            // Click left half = prev parent, right half = next parent
+            if ((float)x < sx+sw/2.0f) {
+                p->parent_index--;
+                if (p->parent_index < -1) p->parent_index = world->count-1;
+                if (p->parent_index == es->selected) p->parent_index--;
+            } else {
+                p->parent_index++;
+                if (p->parent_index >= world->count) p->parent_index = -1;
+                if (p->parent_index == es->selected) p->parent_index++;
             }
             return;
         }
-    }
-
-    // ── Row 1 buttons ─────────────────────────────────────────────────────────
-    // Add
-    if ((float)x >= 8 && (float)x <= 98 && (float)y >= btn_y && (float)y <= btn_y + 26) {
-        add_blank_planet(world, es); return;
-    }
-    // Delete
-    if ((float)x >= 106 && (float)x <= 196 && (float)y >= btn_y && (float)y <= btn_y + 26) {
-        if (es->selected >= 0 && es->selected < world->count) {
-            free_ring_particles(&world->planets[es->selected]);
-            for (int i = es->selected; i < world->count - 1; i++)
-                world->planets[i] = world->planets[i + 1];
-            world->count--;
-            if (es->selected >= world->count) es->selected = world->count - 1;
+        // Sliders handled passively by SDL mouse state in draw
+    } else { // EDITOR_TAB_VISUAL
+        // Texture picker
+        sy+=20.0f;
+        int tx_cols=4;
+        float tx_w=(sw-(tx_cols-1)*4.0f)/tx_cols, tx_h=20.0f;
+        for (int i=0;i<TEXTURE_COUNT;i++) {
+            float col=(float)(i%tx_cols),row=(float)(i/tx_cols);
+            float tx=sx+col*(tx_w+4),ty=sy+row*(tx_h+4);
+            if ((float)x>=tx&&(float)x<=tx+tx_w&&(float)y>=ty&&(float)y<=ty+tx_h) {
+                es->selected_texture=i;
+                strncpy(p->texture_name,TEXTURE_FILES[i],sizeof(p->texture_name)-1);
+                char path[128]; snprintf(path,sizeof(path),"assets/%s",TEXTURE_FILES[i]);
+                extern GLuint load_texture(const char*);
+                p->texture_id=load_texture(path);
+                return;
+            }
         }
-        return;
-    }
-    // Back to menu
-    if ((float)x >= PANEL_W-98 && (float)x <= PANEL_W-8 &&
-        (float)y >= btn_y && (float)y <= btn_y + 26) {
-        *state = STATE_MENU; return;
-    }
+        int tx_rows=(TEXTURE_COUNT+tx_cols-1)/tx_cols;
+        sy+=tx_rows*(tx_h+4)+10.0f;
 
-    // ── Row 2 buttons ─────────────────────────────────────────────────────────
-    // New System
-    if ((float)x >= 8 && (float)x <= 8+half_w &&
-        (float)y >= btn_y2 && (float)y <= btn_y2 + 24) {
-        // Free all ring particles first
-        for (int i = 0; i < world->count; i++)
-            free_ring_particles(&world->planets[i]);
-        world->count = 0;
-        es->selected = -1;
-        // Add a default star
-        add_blank_planet(world, es);
-        strncpy(world->planets[0].name, "Star", 32);
-        world->planets[0].distance = 0.0f;
-        world->planets[0].size     = 2.0f;
-        world->planets[0].orbit_speed = 0.0f;
-        world->planets[0].parent_index = -1;
-        es->selected = 0;
-        return;
-    }
-    // Load Default
-    if ((float)x >= 16+half_w && (float)x <= 16+half_w*2 &&
-        (float)y >= btn_y2 && (float)y <= btn_y2 + 24) {
-        for (int i = 0; i < world->count; i++)
-            free_ring_particles(&world->planets[i]);
-        extern void load_planets(World*, const char*);
-        load_planets(world, "assets/planets.csv");
-        es->selected = -1;
-        return;
-    }
+        // Atmosphere toggle
+        if ((float)x>=sx&&(float)x<=sx+sw&&(float)y>=sy&&(float)y<=sy+26)
+            { p->has_atmosphere=!p->has_atmosphere; return; }
+        sy+=32.0f;
+        if (p->has_atmosphere) sy+=120.0f; // skip 3 colour sliders
 
-    // ── Property area ─────────────────────────────────────────────────────────
-    if (es->selected < 0 || es->selected >= world->count) return;
-
-    // Planet name field: drawn at sy..sy+24, then sy advances by 32
-    if ((float)x >= sx && (float)x <= sx + sw &&
-        (float)y >= sy && (float)y <= sy + 24.0f) {
-        es->editing_name = true;
-        SDL_StartTextInput();
-        return;
-    }
-
-    // Name field occupies sy..sy+24, then sy advances 32px (matches draw)
-    float sy_sliders = sy + 32.0f;
-    // Sliders: 5 sliders * 44px each
-    float sy_after_sliders = sy_sliders + 5 * 44.0f;
-
-    // Rings toggle button
-    float sy_rings = sy_after_sliders;  // = sy+32 + 5*44
-    if ((float)x >= sx && (float)x <= sx + sw &&
-        (float)y >= sy_rings && (float)y <= sy_rings + 26) {
-        Planet* p = &world->planets[es->selected];
-        p->has_rings = !p->has_rings;
-        if (p->has_rings) init_ring_particles(p);
-        else              free_ring_particles(p);
-        return;
-    }
-
-    float sy_tex = sy_rings + 34.0f + 22.0f;
-    int tx_cols = 4;
-    float tx_w = (sw - (tx_cols - 1) * 4.0f) / tx_cols;
-    float tx_h = 20.0f;
-
-    // Texture picker
-    for (int i = 0; i < TEXTURE_COUNT; i++) {
-        float col = (float)(i % tx_cols);
-        float row = (float)(i / tx_cols);
-        float tx = sx + col * (tx_w + 4);
-        float ty = sy_tex + row * (tx_h + 4);
-        if ((float)x >= tx && (float)x <= tx + tx_w &&
-            (float)y >= ty && (float)y <= ty + tx_h) {
-            es->selected_texture = i;
-            Planet* p = &world->planets[es->selected];
-            strncpy(p->texture_name, TEXTURE_FILES[i], sizeof(p->texture_name)-1);
-            char path[128];
-            snprintf(path, sizeof(path), "assets/%s", TEXTURE_FILES[i]);
-            extern GLuint load_texture(const char*);
-            p->texture_id = load_texture(path);
+        // Rings toggle
+        if ((float)x>=sx&&(float)x<=sx+sw&&(float)y>=sy&&(float)y<=sy+26) {
+            p->has_rings=!p->has_rings;
+            if (p->has_rings) init_ring_particles(p);
+            else              free_ring_particles(p);
             return;
         }
+        // Ring sliders handled passively
     }
 
-    // Save button
-    int tx_rows = (TEXTURE_COUNT + tx_cols - 1) / tx_cols;
-    float save_y = sy_tex + tx_rows * (tx_h + 4) + 12.0f;
-    if ((float)x >= sx && (float)x <= sx + sw &&
-        (float)y >= save_y && (float)y <= save_y + 32) {
-        save_planets(world, "assets/custom_planets.csv");
+    // Save button (at bottom)
+    // We compute approximate save_y — use win_h based
+    float save_y = (float)win_h - 40.0f;
+    if ((float)x>=sx&&(float)x<=sx+sw&&(float)y>=save_y&&(float)y<=save_y+32) {
+        save_planets(world,"assets/custom_planets.csv");
         printf("Saved to assets/custom_planets.csv\n");
         return;
     }
 }
 
-// ── Save ─────────────────────────────────────────────────────────────────────
-
 void save_planets(World* world, const char* filename) {
-    FILE* f = fopen(filename, "w");
-    if (!f) { printf("Error: cannot open %s for writing\n", filename); return; }
+    FILE* f=fopen(filename,"w");
+    if (!f) { printf("Error: cannot open %s for writing\n",filename); return; }
 
-    fprintf(f, "#name,distance,size,orbit_speed,rotation_speed,axial_tilt,texture,has_atmo,atmo_r,atmo_g,atmo_b,has_rings,parent\n");
+    fprintf(f,"#name,dist,size,orbit,rot,tilt,tex,atmo,ar,ag,ab,"
+              "rings,rr,rg,rb,ri,ro,type,parent\n");
 
-    for (int i = 0; i < world->count; i++) {
-        const Planet* p = &world->planets[i];
-        const char* parent_name = (p->parent_index >= 0 && p->parent_index < world->count)
+    for (int i=0;i<world->count;i++) {
+        const Planet* p=&world->planets[i];
+        const char* par=(p->parent_index>=0&&p->parent_index<world->count)
             ? world->planets[p->parent_index].name : "";
-
-        fprintf(f, "%s,%.4f,%.4f,%.4f,%.4f,%.4f,%s,%d,%.2f,%.2f,%.2f,%d,%s\n",
-                p->name, p->distance, p->size,
-                p->orbit_speed, p->rotation_speed, p->axial_tilt,
-                p->texture_name, p->has_atmosphere,
-                p->atmo_r, p->atmo_g, p->atmo_b, p->has_rings, parent_name);
+        fprintf(f,"%s,%.4f,%.4f,%.4f,%.4f,%.4f,%s,%d,%.3f,%.3f,%.3f,"
+                  "%d,%.3f,%.3f,%.3f,%.3f,%.3f,%d,%s\n",
+                p->name,p->distance,p->size,p->orbit_speed,
+                p->rotation_speed,p->axial_tilt,p->texture_name,
+                p->has_atmosphere,p->atmo_r,p->atmo_g,p->atmo_b,
+                p->has_rings,p->ring_r,p->ring_g,p->ring_b,
+                p->ring_inner,p->ring_outer,(int)p->obj_type,par);
     }
     fclose(f);
 }

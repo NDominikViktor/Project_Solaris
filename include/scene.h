@@ -21,23 +21,36 @@ typedef struct {
 } Particle;
 
 /** @brief All data describing one planet (or moon) in the simulation. */
+/**
+ * @brief Object type — drives rendering behaviour and editor UI.
+ */
+typedef enum {
+    OBJ_PLANET = 0, /**< Regular planet orbiting a star. */
+    OBJ_STAR   = 1, /**< Self-luminous star, drawn unlit with a glow effect. */
+    OBJ_MOON   = 2  /**< Moon orbiting a planet. */
+} ObjectType;
+
 typedef struct {
-    char  name[32];          /**< Display name, also used for special-case logic. */
-    float distance;          /**< Orbital radius from the parent body. */
-    float size;              /**< Sphere radius used for rendering and collision. */
-    float orbit_speed;       /**< Orbital angular speed (radians per update). */
-    float rotation_speed;    /**< Self-rotation speed (degrees per update). */
-    float current_angle;     /**< Current orbital angle in radians. */
-    float rotation_angle;    /**< Current self-rotation angle in degrees. */
-    float axial_tilt;        /**< Axial tilt in degrees. */
-    GLuint texture_id;       /**< OpenGL texture handle. */
-    char  texture_name[64];  /**< Name of the texture file. */
-    int   has_atmosphere;    /**< Non-zero if an atmosphere halo should be drawn. */
+    char  name[32];               /**< Display name. */
+    ObjectType obj_type;          /**< Star, planet, or moon. */
+    float distance;               /**< Orbital radius from the parent body. */
+    float size;                   /**< Sphere radius used for rendering and collision. */
+    float orbit_speed;            /**< Orbital angular speed (radians per update). */
+    float rotation_speed;         /**< Self-rotation speed (degrees per update). */
+    float current_angle;          /**< Current orbital angle in radians. */
+    float rotation_angle;         /**< Current self-rotation angle in degrees. */
+    float axial_tilt;             /**< Axial tilt in degrees. */
+    GLuint texture_id;            /**< OpenGL texture handle. */
+    char  texture_name[64];       /**< Texture filename (without assets/ path). */
+    int   has_atmosphere;         /**< Non-zero if an atmosphere halo should be drawn. */
     float atmo_r, atmo_g, atmo_b; /**< Atmosphere colour (RGB, 0-1). */
-    int   has_rings;         /**< Non-zero if the planet has a ring system. */
+    int   has_rings;              /**< Non-zero if a ring system should be drawn. */
+    float ring_r, ring_g, ring_b; /**< Ring particle colour (RGB, 0-1). */
+    float ring_inner;             /**< Inner radius multiplier (relative to size). Default 1.3. */
+    float ring_outer;             /**< Outer radius multiplier (relative to size). Default 2.1. */
     Particle* ring_particles;     /**< Heap-allocated ring particle array, or NULL. */
-    int   particle_count;    /**< Number of elements in ring_particles. */
-    int   parent_index;      /**< Index of parent in World.planets, or -1 for root. */
+    int   particle_count;         /**< Number of elements in ring_particles. */
+    int   parent_index;           /**< Index of parent in World.planets, or -1 for root. */
     float world_x, world_y, world_z; /**< Absolute world-space position (computed each frame). */
 } Planet;
 
