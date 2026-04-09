@@ -437,6 +437,39 @@ void ui_draw_editor(TTF_Font* font, World* world, EditorState* es,
         int tx_rows = (TEXTURE_COUNT+tx_cols-1)/tx_cols;
         sy += tx_rows*(tx_h+4)+10.0f;
 
+        // ── Custom texture path input ─────────────────────────────────────────
+        if (font) ui_draw_text(font,"Custom texture (filename.jpg):",sx,sy,
+                               0.51f,0.51f,0.59f,1.0f,win_w,win_h);
+        sy += 18.0f;
+        {
+            int act = es->editing_custom_tex;
+            gl_fill_rect(sx,sy,sw,24,
+                         act?0.10f:0.06f, act?0.16f:0.08f, act?0.28f:0.14f, 0.9f);
+            gl_draw_rect(sx,sy,sw,24,
+                         act?0.31f:0.20f, act?0.63f:0.27f, act?1.00f:0.51f, 1.0f);
+            char tex_disp[140];
+            if (act)
+                snprintf(tex_disp,sizeof(tex_disp),"%s|",es->custom_tex_buf);
+            else if (es->custom_tex_buf[0])
+                snprintf(tex_disp,sizeof(tex_disp),"%s",es->custom_tex_buf);
+            else
+                snprintf(tex_disp,sizeof(tex_disp),"click to type filename...");
+            if (font) ui_draw_text(font,tex_disp,sx+4,sy+4,
+                                   act?0.31f:0.40f,
+                                   act?0.63f:0.40f,
+                                   act?1.0f :0.50f,
+                                   1.0f,win_w,win_h);
+        }
+        sy += 28.0f;
+        // Apply button
+        {
+            gl_fill_rect(sx,sy,sw,24, 0.10f,0.22f,0.10f,0.9f);
+            gl_draw_rect(sx,sy,sw,24, 0.24f,0.70f,0.24f,1.0f);
+            if (font) draw_text_centered(font,"Apply custom texture",sx,sy,sw,24,
+                                          0.31f,0.78f,0.39f,1.0f,win_w,win_h);
+        }
+        sy += 30.0f;
+
         // ── Atmosphere ───────────────────────────────────────────────────────
         {
             int ha = p->has_atmosphere;
@@ -662,6 +695,45 @@ void ui_editor_click(int x, int y, World* world, EditorState* es,
             }
             int tx_rows = (TEXTURE_COUNT+tx_cols-1)/tx_cols;
             sy += tx_rows*(tx_h+4)+10.0f;
+
+            // Custom texture field label (18px) + field (24px)
+            sy += 18.0f;
+            if ((float)x>=sx&&(float)x<=sx+sw&&(float)y>=sy&&(float)y<=sy+24) {
+                // Stop name editing if active
+                if (es->editing_name) { es->editing_name=false; }
+                es->editing_custom_tex = !es->editing_custom_tex;
+                if (es->editing_custom_tex) SDL_StartTextInput();
+                else                        SDL_StopTextInput();
+                return;
+            }
+            sy += 28.0f;
+            // Apply button (24px)
+            if ((float)x>=sx&&(float)x<=sx+sw&&(float)y>=sy&&(float)y<=sy+24) {
+                if (es->custom_tex_buf[0]) {
+                    char path[200];
+                    // Support both absolute path and assets-relative filename
+                    if (es->custom_tex_buf[0]=='/' || es->custom_tex_buf[1]==':') {
+                        // Absolute path — use as-is
+                        snprintf(path,sizeof(path),"%s",es->custom_tex_buf);
+                    } else {
+                        snprintf(path,sizeof(path),"assets/%s",es->custom_tex_buf);
+                    }
+                    extern GLuint load_texture(const char*);
+                    GLuint new_id = load_texture(path);
+                    if (new_id) {
+                        p->texture_id = new_id;
+                        strncpy(p->texture_name, es->custom_tex_buf, sizeof(p->texture_name)-1);
+                        es->selected_texture = -1; // deselect preset
+                        printf("Custom texture applied: %s\n", path);
+                    } else {
+                        printf("Failed to load texture: %s\n", path);
+                    }
+                    es->editing_custom_tex = false;
+                    SDL_StopTextInput();
+                }
+                return;
+            }
+            sy += 30.0f;
 
             // Atmosphere toggle
             if ((float)x>=sx&&(float)x<=sx+sw&&(float)y>=sy&&(float)y<=sy+26)

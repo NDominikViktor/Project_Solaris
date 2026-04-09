@@ -33,12 +33,14 @@ typedef enum {
 
 /** @brief Runtime state for the editor panel. */
 typedef struct {
-    int  selected;           /**< Index of the selected planet, or -1. */
+    int  selected;              /**< Index of the selected planet, or -1. */
     char new_name[32];
     int  selected_texture;
-    bool editing_name;
-    EditorTab active_tab;    /**< Current tab in the editor. */
-    float scroll_y;          /**< Scroll offset for the properties panel. */
+    bool editing_name;          /**< True while the name field has keyboard focus. */
+    bool editing_custom_tex;    /**< True while the custom texture path field has focus. */
+    char custom_tex_buf[128];   /**< Buffer for custom texture filename input. */
+    EditorTab active_tab;       /**< Current tab in the editor. */
+    float scroll_y;             /**< Scroll offset for the properties panel. */
 } EditorState;
 
 #define TEXTURE_COUNT 12

@@ -304,7 +304,7 @@ int main(int argc, char* args[]) {
 
     AppState    app_state=STATE_MENU;
     Button      menu_btns[3]={0};
-    EditorState editor={-1,"NewPlanet",3,false,EDITOR_TAB_BASIC,0.0f};
+    EditorState editor={-1,"NewPlanet",3,false,false,"",EDITOR_TAB_BASIC,0.0f};
 
     TTF_Font* font=ui_init("assets/font.ttf",15);
     setup_projection(win_w,win_h);
@@ -359,20 +359,40 @@ int main(int argc, char* args[]) {
                     }
                 }
                 if(event.type==SDL_KEYDOWN){
-                    if(event.key.keysym.sym==SDLK_ESCAPE)app_state=STATE_MENU;
+                    SDL_Keycode k=event.key.keysym.sym;
                     if(editor.editing_name&&editor.selected>=0){
-                        if(event.key.keysym.sym==SDLK_RETURN||event.key.keysym.sym==SDLK_ESCAPE){
-                            editor.editing_name=false;SDL_StopTextInput();
-                        }else if(event.key.keysym.sym==SDLK_BACKSPACE){
-                            int len=strlen(world.planets[editor.selected].name);
-                            if(len>0)world.planets[editor.selected].name[len-1]='\0';
+                        if(k==SDLK_RETURN||k==SDLK_KP_ENTER){
+                            editor.editing_name=false; SDL_StopTextInput();
+                        } else if(k==SDLK_BACKSPACE){
+                            char* nm=world.planets[editor.selected].name;
+                            int len=(int)strlen(nm); if(len>0) nm[len-1]='\0';
+                        } else if(k==SDLK_ESCAPE){
+                            editor.editing_name=false; SDL_StopTextInput();
+                            app_state=STATE_MENU;
                         }
+                    } else if(editor.editing_custom_tex){
+                        if(k==SDLK_RETURN||k==SDLK_KP_ENTER){
+                            editor.editing_custom_tex=false; SDL_StopTextInput();
+                        } else if(k==SDLK_BACKSPACE){
+                            int len=(int)strlen(editor.custom_tex_buf);
+                            if(len>0) editor.custom_tex_buf[len-1]='\0';
+                        } else if(k==SDLK_ESCAPE){
+                            editor.editing_custom_tex=false; SDL_StopTextInput();
+                        }
+                    } else {
+                        if(k==SDLK_ESCAPE) app_state=STATE_MENU;
                     }
                 }
-                if(event.type==SDL_TEXTINPUT&&editor.editing_name&&editor.selected>=0){
-                    strncat(world.planets[editor.selected].name,event.text.text,
-                            sizeof(world.planets[editor.selected].name)
-                            -strlen(world.planets[editor.selected].name)-1);
+                if(event.type==SDL_TEXTINPUT){
+                    if(editor.editing_name&&editor.selected>=0){
+                        strncat(world.planets[editor.selected].name, event.text.text,
+                                sizeof(world.planets[editor.selected].name)
+                                -strlen(world.planets[editor.selected].name)-1);
+                    } else if(editor.editing_custom_tex){
+                        strncat(editor.custom_tex_buf, event.text.text,
+                                sizeof(editor.custom_tex_buf)
+                                -strlen(editor.custom_tex_buf)-1);
+                    }
                 }
                 continue;
             }
