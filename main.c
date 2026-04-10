@@ -132,8 +132,13 @@ void draw_orbit_paths(World* world) {
     glDisable(GL_BLEND);
 }
 
+// Forward declaration for TTF text in HUD
+void ui_draw_text(TTF_Font* font, const char* text, float x, float y,
+                  float r, float g, float b, float a, int win_w, int win_h);
+
 void draw_hud(int target_index, float intensity, World* w,
-              int scr_w, int scr_h, bool help_visible) {
+              int scr_w, int scr_h, bool help_visible,
+              float time_scale, int cam_preset, TTF_Font* font) {
     GLboolean lighting_was_on  = glIsEnabled(GL_LIGHTING);
     GLboolean cull_face_was_on = glIsEnabled(GL_CULL_FACE);
     glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
@@ -142,42 +147,155 @@ void draw_hud(int target_index, float intensity, World* w,
     glDisable(GL_LIGHTING); glDisable(GL_DEPTH_TEST); glDisable(GL_CULL_FACE);
     glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    // ── Sun intensity bar (bottom-left) ───────────────────────────────────────
     glColor4f(1,1,1,0.2f);
     glBegin(GL_QUADS);
         glVertex2f(20,scr_h-50); glVertex2f(220,scr_h-50);
         glVertex2f(220,scr_h-20); glVertex2f(20,scr_h-20);
     glEnd();
-    float fill = ((intensity-0.1f)/1.9f)*200.0f;
+    float fill=((intensity-0.1f)/1.9f)*200.0f;
     glColor4f(1,0.7f,0,0.8f);
     glBegin(GL_QUADS);
         glVertex2f(20,scr_h-50); glVertex2f(20+fill,scr_h-50);
         glVertex2f(20+fill,scr_h-20); glVertex2f(20,scr_h-20);
     glEnd();
 
-    if (target_index != -1 && target_index < w->count) {
-        Planet* p = &w->planets[target_index];
-        glColor4f(0,0.1f,0.2f,0.7f);
+    // ── Time scale bar + label (bottom-left, above intensity bar) ────────────
+    float ts_y = (float)scr_h - 85.0f;
+    // Track
+    glColor4f(0.2f,0.2f,0.3f,0.7f);
+    glBegin(GL_QUADS);
+        glVertex2f(20,ts_y); glVertex2f(220,ts_y);
+        glVertex2f(220,ts_y+16); glVertex2f(20,ts_y+16);
+    glEnd();
+    // Fill — colour shifts warm→fast, cool→slow, grey→paused
+    float ts_fill = (time_scale/10.0f)*200.0f;
+    float ts_r = (time_scale==0.0f)?0.4f:(time_scale<=1.0f?0.3f:1.0f);
+    float ts_g = (time_scale==0.0f)?0.4f:(time_scale<=1.0f?0.7f:0.5f);
+    float ts_b = (time_scale==0.0f)?0.5f:(time_scale<=1.0f?1.0f:0.2f);
+    glColor4f(ts_r,ts_g,ts_b,0.85f);
+    glBegin(GL_QUADS);
+        glVertex2f(20,ts_y); glVertex2f(20+ts_fill,ts_y);
+        glVertex2f(20+ts_fill,ts_y+16); glVertex2f(20,ts_y+16);
+    glEnd();
+    // Border
+    glColor4f(0.5f,0.6f,0.8f,0.6f);
+    glBegin(GL_LINE_LOOP);
+        glVertex2f(20,ts_y); glVertex2f(220,ts_y);
+        glVertex2f(220,ts_y+16); glVertex2f(20,ts_y+16);
+    glEnd();
+    // Label using draw_text_simple
+    char ts_buf[32];
+    if (time_scale==0.0f) snprintf(ts_buf,sizeof(ts_buf),"TIME: PAUSED");
+    else                  snprintf(ts_buf,sizeof(ts_buf),"TIME: %.2fx", time_scale);
+    glColor3f(0.8f,0.9f,1.0f);
+    draw_text_simple(24, ts_y+1, ts_buf);
+
+    // ── Camera preset + pause buttons (bottom-left, above time bar) ─────────
+    // 4 buttons: FREE | TOP | SIDE | PAUSE — each 46px wide, 24px gap
+    float cb_y = ts_y - 30.0f;
+    const char* cam_labels[4] = {"FREE","TOP","SIDE","PAUSE"};
+    for (int i=0; i<4; i++) {
+        float cx = 20.0f + i*70.0f;
+        float cw = 46.0f;
+        // Highlight active state
+        int active = (i==0 && cam_preset==0) ||
+                     (i==1 && cam_preset==1) ||
+                     (i==2 && cam_preset==2) ||
+                     (i==3 && time_scale==0.0f);
+        // Background
+        if (active)
+            glColor4f(0.14f,0.35f,0.70f,0.92f);
+        else
+            glColor4f(0.06f,0.09f,0.20f,0.82f);
         glBegin(GL_QUADS);
-            glVertex2f(scr_w-280,20); glVertex2f(scr_w-20,20);
-            glVertex2f(scr_w-20,160); glVertex2f(scr_w-280,160);
+            glVertex2f(cx,cb_y); glVertex2f(cx+cw,cb_y);
+            glVertex2f(cx+cw,cb_y+24); glVertex2f(cx,cb_y+24);
         glEnd();
-        glColor4f(0,0.8f,1,1);
+        // Border — brighter when active
+        if (active) glColor4f(0.40f,0.75f,1.0f,1.0f);
+        else        glColor4f(0.22f,0.44f,0.80f,0.75f);
         glBegin(GL_LINE_LOOP);
-            glVertex2f(scr_w-280,20); glVertex2f(scr_w-20,20);
-            glVertex2f(scr_w-20,160); glVertex2f(scr_w-280,160);
+            glVertex2f(cx,cb_y); glVertex2f(cx+cw,cb_y);
+            glVertex2f(cx+cw,cb_y+24); glVertex2f(cx,cb_y+24);
         glEnd();
-        char buf[64];
-        glColor3f(1,1,1);
-        draw_text_simple(scr_w-260, 40,  p->name);
-        sprintf(buf,"DIST: %.1f",  p->distance);  draw_text_simple(scr_w-260, 75,  buf);
-        sprintf(buf,"SIZE: %.2f",  p->size);       draw_text_simple(scr_w-260, 110, buf);
-        sprintf(buf,"SPD: %.3f",   p->orbit_speed);draw_text_simple(scr_w-260, 140, buf);
+        // Label
+        if (active) glColor3f(0.55f,0.90f,1.0f);
+        else        glColor3f(0.65f,0.78f,0.95f);
+        draw_text_simple(cx+3, cb_y+5, cam_labels[i]);
     }
 
+    // ── Planet info panel (top-right) — sim data ──────────
+    if (target_index!=-1 && target_index<w->count && font) {
+        Planet* p=&w->planets[target_index];
+
+        // Panel height: base sim rows
+        int sim_rows = 6;
+        float line_h = 20.0f;
+        float pw = 300.0f;
+        float ph = 36.0f + sim_rows * line_h;
+        float px = (float)scr_w - pw - 16.0f;
+        float py = 16.0f;
+
+        // Background
+        glColor4f(0.02f,0.06f,0.16f,0.88f);
+        glBegin(GL_QUADS);
+            glVertex2f(px,py); glVertex2f(px+pw,py);
+            glVertex2f(px+pw,py+ph); glVertex2f(px,py+ph);
+        glEnd();
+        // Border
+        glColor4f(0.15f,0.55f,1.0f,0.9f);
+        glBegin(GL_LINE_LOOP);
+            glVertex2f(px,py); glVertex2f(px+pw,py);
+            glVertex2f(px+pw,py+ph); glVertex2f(px,py+ph);
+        glEnd();
+        // Title accent line
+        glColor4f(0.15f,0.55f,1.0f,0.35f);
+        glBegin(GL_LINES);
+            glVertex2f(px+8,py+30); glVertex2f(px+pw-8,py+30);
+        glEnd();
+
+        // Title (TTF)
+        glEnable(GL_TEXTURE_2D);
+        ui_draw_text(font, p->name, px+10, py+8, 0.4f,0.82f,1.0f,1.0f, scr_w,scr_h);
+        glDisable(GL_TEXTURE_2D);
+
+        // Sim rows
+        char buf[80];
+        float ty = py + 36.0f;
+        glEnable(GL_TEXTURE_2D);
+
+        const char* type_str = (p->obj_type==OBJ_STAR)?"Star":
+                               (p->obj_type==OBJ_MOON)?"Moon":"Planet";
+        snprintf(buf,sizeof(buf),"Type:         %s", type_str);
+        ui_draw_text(font,buf, px+10,ty, 0.65f,0.75f,0.90f,1.0f,scr_w,scr_h); ty+=line_h;
+
+        const char* par=( p->parent_index>=0&&p->parent_index<w->count)
+            ? w->planets[p->parent_index].name : "none";
+        snprintf(buf,sizeof(buf),"Parent:       %s", par);
+        ui_draw_text(font,buf, px+10,ty, 0.65f,0.75f,0.90f,1.0f,scr_w,scr_h); ty+=line_h;
+
+        snprintf(buf,sizeof(buf),"Distance:     %.2f (sim)", p->distance);
+        ui_draw_text(font,buf, px+10,ty, 0.65f,0.75f,0.90f,1.0f,scr_w,scr_h); ty+=line_h;
+
+        snprintf(buf,sizeof(buf),"Size:         %.2f (sim)", p->size);
+        ui_draw_text(font,buf, px+10,ty, 0.65f,0.75f,0.90f,1.0f,scr_w,scr_h); ty+=line_h;
+
+        snprintf(buf,sizeof(buf),"Orbit speed:  %.4f rad/s", p->orbit_speed);
+        ui_draw_text(font,buf, px+10,ty, 0.65f,0.75f,0.90f,1.0f,scr_w,scr_h); ty+=line_h;
+
+        snprintf(buf,sizeof(buf),"Axial tilt:   %.1f deg", p->axial_tilt);
+        ui_draw_text(font,buf, px+10,ty, 0.65f,0.75f,0.90f,1.0f,scr_w,scr_h); ty+=line_h;
+
+        glDisable(GL_TEXTURE_2D);
+    }
+
+    // ── Help icon (top-left) ─────────────────────────────────────────────────
     if (!help_visible) {
         glColor4f(0,0.8f,1,0.5f);
         glBegin(GL_LINE_LOOP);
-            glVertex2f(20,20); glVertex2f(100,20); glVertex2f(100,50); glVertex2f(20,50);
+            glVertex2f(20,20); glVertex2f(100,20);
+            glVertex2f(100,50); glVertex2f(20,50);
         glEnd();
         glBegin(GL_LINES);
             glVertex2f(60,30); glVertex2f(60,32);
@@ -292,7 +410,7 @@ int main(int argc, char* args[]) {
     World   world;
     float   sun_intensity=1.0f;
     bool    show_help=false;
-    GLuint  help_texture_id=0, skybox_texture_id=0;
+    GLuint  skybox_texture_id=0;
     OBJModel comet_model={NULL,NULL,0,0,0};
     Comet    halley={0,0,0,0,0.0009f};
     Asteroid asteroid_belt[MAX_ASTEROID];
@@ -314,7 +432,6 @@ int main(int argc, char* args[]) {
     else       load_planets(&world,"assets/planets.csv");
 
     init_asteroid_belt(asteroid_belt);
-    help_texture_id  =load_texture("assets/help.png");
     skybox_texture_id=load_texture("assets/stars.jpg");
     load_asteroid_obj("assets/asteroid.obj",&comet_model);
 
@@ -326,7 +443,9 @@ int main(int argc, char* args[]) {
     float ambient[]={0.05f,0.05f,0.05f,1.0f}, specular[]={0.5f,0.5f,0.5f,1.0f};
     glLightfv(GL_LIGHT0,GL_AMBIENT,ambient);glLightfv(GL_LIGHT0,GL_SPECULAR,specular);
 
-    int target_planet_index=-1;
+    int   target_planet_index=-1;
+    float time_scale=1.0f;      // 0=paused, 1=normal, up to 10x
+    int   cam_preset=0;         // 0=free, 1=top, 2=side
 
     while(running){
         Uint32 current_time=SDL_GetTicks();
@@ -403,8 +522,31 @@ int main(int argc, char* args[]) {
                 setup_projection(win_w,win_h);
             }
             if(event.type==SDL_MOUSEBUTTONDOWN&&event.button.button==SDL_BUTTON_LEFT){
+                // Check camera preset button clicks (bottom-left HUD)
+                {
+                    int mx=event.button.x, my=event.button.y;
+                    float ts_y=(float)win_h-85.0f;
+                    float cb_y=ts_y-32.0f;
+                    if(my>=cb_y && my<=cb_y+24) {
+                        // 4 buttons at x=20,90,160,230 each 46px wide
+                        if     (mx>=20 &&mx<=66 ){ cam_preset=0; init_camera(&camera); }
+                        else if(mx>=90 &&mx<=136){ cam_preset=1; camera.x=0;camera.y=80.0f;camera.z=0; camera.pitch=-89.0f;camera.yaw=0; }
+                        else if(mx>=160&&mx<=206){ cam_preset=2; camera.x=0;camera.y=0;camera.z=80.0f; camera.pitch=0;camera.yaw=0; }
+                        else if(mx>=230&&mx<=276){ time_scale=(time_scale>0.0f)?0.0f:1.0f; }
+                    }
+                }
+                // Check time scale bar click (drag)
+                {
+                    int mx=event.button.x, my=event.button.y;
+                    float ts_y=(float)win_h-85.0f;
+                    if(mx>=20&&mx<=220&&my>=(int)ts_y&&my<=(int)(ts_y+16)) {
+                        time_scale=((float)(mx-20)/200.0f)*10.0f;
+                        if(time_scale<0)time_scale=0;
+                        if(time_scale>10)time_scale=10;
+                    }
+                }
                 int hit=pick_planet(event.button.x,event.button.y,&camera,&world);
-                if(hit!=-1)target_planet_index=hit;
+                if(hit!=-1){ target_planet_index=hit; }
             }
             if(event.type==SDL_MOUSEMOTION&&
                (SDL_GetMouseState(NULL,NULL)&SDL_BUTTON(SDL_BUTTON_RIGHT))){
@@ -425,7 +567,33 @@ int main(int argc, char* args[]) {
                     target_planet_index=event.key.keysym.sym-SDLK_1;
                     if(target_planet_index>=world.count)target_planet_index=-1;
                 }
-                if(event.key.keysym.sym==SDLK_0)target_planet_index=-1;
+                if(event.key.keysym.sym==SDLK_0) target_planet_index=-1;
+                // Time scale: [ = slower, ] = faster, P = pause/resume
+                if(event.key.keysym.sym==SDLK_p){
+                    time_scale=(time_scale>0.0f)?0.0f:1.0f;
+                }
+                if(event.key.keysym.sym==SDLK_LEFTBRACKET){
+                    time_scale-=0.25f; if(time_scale<0.0f)time_scale=0.0f;
+                }
+                if(event.key.keysym.sym==SDLK_RIGHTBRACKET){
+                    time_scale+=0.25f; if(time_scale>10.0f)time_scale=10.0f;
+                }
+                // Camera presets: T=top, Y=side, U=free
+                if(event.key.keysym.sym==SDLK_t){
+                    cam_preset=1;
+                    camera.x=0; camera.y=80.0f; camera.z=0;
+                    camera.pitch=-89.0f; camera.yaw=0;
+                }
+                if(event.key.keysym.sym==SDLK_y){
+                    cam_preset=2;
+                    camera.x=0; camera.y=0; camera.z=80.0f;
+                    camera.pitch=0; camera.yaw=0;
+                }
+                if(event.key.keysym.sym==SDLK_u){
+                    cam_preset=0;
+                    init_camera(&camera);
+                }
+
             }
         }
 
@@ -492,8 +660,8 @@ int main(int argc, char* args[]) {
         glLightfv(GL_LIGHT0,GL_POSITION,light_pos);
 
         for(int i=0;i<world.count;i++){
-            world.planets[i].current_angle +=world.planets[i].orbit_speed *delta_time*10.0f;
-            world.planets[i].rotation_angle+=world.planets[i].rotation_speed*delta_time*50.0f;
+            world.planets[i].current_angle +=world.planets[i].orbit_speed *delta_time*10.0f*time_scale;
+            world.planets[i].rotation_angle+=world.planets[i].rotation_speed*delta_time*50.0f*time_scale;
             Planet*p=&world.planets[i];
             float lx=cosf(p->current_angle)*p->distance;
             float lz=sinf(p->current_angle)*p->distance;
@@ -572,27 +740,90 @@ int main(int argc, char* args[]) {
 
         draw_moon_shadows(&world);
 
-        halley.angle+=0.002f;
+        halley.angle+=0.002f*time_scale;
         if(halley.angle>6.28f)halley.angle=0;
         draw_comet(&halley,delta_time,&comet_model);
 
-        draw_hud(target_planet_index,sun_intensity,&world,win_w,win_h,show_help);
+        draw_hud(target_planet_index,sun_intensity,&world,win_w,win_h,show_help,
+                 time_scale,cam_preset,font);
 
-        if(show_help){
+        if(show_help && font){
+            // Draw help overlay with TTF — always up to date with controls
             glMatrixMode(GL_PROJECTION);glPushMatrix();glLoadIdentity();
             glOrtho(0,win_w,win_h,0,-1,1);
             glMatrixMode(GL_MODELVIEW);glPushMatrix();glLoadIdentity();
             glDisable(GL_LIGHTING);glDisable(GL_DEPTH_TEST);glDisable(GL_CULL_FACE);
             glEnable(GL_BLEND);glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-            glEnable(GL_TEXTURE_2D);glBindTexture(GL_TEXTURE_2D,help_texture_id);
-            glColor3f(1,1,1);
+
+            float hx=100, hy=80, hw=(float)win_w-200, hh=(float)win_h-160;
+
+            // Background
+            glColor4f(0.02f,0.05f,0.15f,0.94f);
             glBegin(GL_QUADS);
-            glTexCoord2f(0,0);glVertex2f(100,      100);
-            glTexCoord2f(1,0);glVertex2f(win_w-100,100);
-            glTexCoord2f(1,1);glVertex2f(win_w-100,win_h-100);
-            glTexCoord2f(0,1);glVertex2f(100,      win_h-100);
+                glVertex2f(hx,hy);glVertex2f(hx+hw,hy);
+                glVertex2f(hx+hw,hy+hh);glVertex2f(hx,hy+hh);
             glEnd();
-            glDisable(GL_BLEND);glDisable(GL_TEXTURE_2D);
+            // Border
+            glColor4f(0.20f,0.55f,1.0f,1.0f);
+            glBegin(GL_LINE_LOOP);
+                glVertex2f(hx,hy);glVertex2f(hx+hw,hy);
+                glVertex2f(hx+hw,hy+hh);glVertex2f(hx,hy+hh);
+            glEnd();
+            // Title underline
+            glColor4f(0.20f,0.55f,1.0f,0.35f);
+            glBegin(GL_LINES);
+                glVertex2f(hx+12,hy+40);glVertex2f(hx+hw-12,hy+40);
+            glEnd();
+
+            // Content
+            float tx=hx+20, ty=hy+12;
+            float lh=26.0f; // line height
+            float col2=hx+hw/2.0f; // second column x
+
+            ui_draw_text(font,"Controls",       tx,ty, 0.40f,0.82f,1.0f,1.0f,win_w,win_h); ty+=44;
+
+            // Column 1 — movement
+            ui_draw_text(font,"MOVEMENT",        tx,ty, 0.40f,0.60f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"W/A/S/D      Move forward/back/left/right",tx,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"Q/E          Move down/up",                tx,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"Arrow keys   Rotate camera",               tx,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"Right mouse  Look around",                 tx,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"Shift        Sprint (3x speed)",           tx,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh+6;
+
+            ui_draw_text(font,"CAMERA PRESETS",  tx,ty, 0.40f,0.60f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"T            Top-down view",               tx,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"Y            Side view",                   tx,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"U            Free camera (reset)",         tx,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh+6;
+
+            ui_draw_text(font,"SELECTION",       tx,ty, 0.40f,0.60f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"Left click   Select planet",               tx,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"1-9          Jump to planet",              tx,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"0            Release follow",              tx,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh;
+
+            // Column 2
+            ty = hy+56;
+            ui_draw_text(font,"TIME CONTROL",    col2,ty, 0.40f,0.60f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"P            Pause / resume",              col2,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"[            Slow down (0.25x)",           col2,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"]            Speed up (0.25x, max 10x)",   col2,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"Click time bar  Set speed directly",       col2,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh+6;
+
+            ui_draw_text(font,"DISPLAY",         col2,ty, 0.40f,0.60f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"+/-          Sun intensity",               col2,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"F            Toggle fog",                  col2,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"O            Toggle orbit paths",          col2,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh+6;
+
+            ui_draw_text(font,"EDITOR",          col2,ty, 0.40f,0.60f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"Main menu -> Planet Editor",               col2,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"Add/Delete planets, set type, parent",     col2,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"Set textures, rings, atmosphere",          col2,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"Save custom solar system to CSV",          col2,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh+6;
+
+            ui_draw_text(font,"OTHER",           col2,ty, 0.40f,0.60f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"F1/H         Toggle this help",            col2,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h); ty+=lh;
+            ui_draw_text(font,"ESC          Quit",                        col2,ty,0.80f,0.85f,0.90f,1.0f,win_w,win_h);
+
+            glDisable(GL_BLEND);
             glEnable(GL_DEPTH_TEST);glEnable(GL_CULL_FACE);
             glPopMatrix();glMatrixMode(GL_PROJECTION);glPopMatrix();
             glMatrixMode(GL_MODELVIEW);
