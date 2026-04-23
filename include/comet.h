@@ -5,6 +5,8 @@
 #ifndef SOLARIS_COMET_H
 #define SOLARIS_COMET_H
 
+#include <GL/gl.h>
+
 /** @brief A single vertex loaded from a Wavefront OBJ file. */
 typedef struct { float x, y, z; } Vertex;
 
@@ -24,6 +26,14 @@ typedef struct {
     int     initialized; /**< Non-zero after a successful load. */
 } OBJModel;
 
+#define MAX_TRAIL_POINTS 128
+
+/** @brief A single point in the comet's particle trail. */
+typedef struct {
+    float x, y, z;
+    float life; // 0.0 - 1.0, fades out
+} TrailPoint;
+
 /**
  * @brief A comet that follows a fixed elliptical orbit around the Sun.
  */
@@ -31,6 +41,11 @@ typedef struct {
     float x, y, z;    /**< Current world-space position. */
     float angle;       /**< Current orbital angle in radians. */
     float speed;       /**< Orbital angular speed in radians per second. */
+
+    // Trail data
+    TrailPoint trail[MAX_TRAIL_POINTS];
+    int trail_head;
+    int trail_length;
 } Comet;
 
 /**
