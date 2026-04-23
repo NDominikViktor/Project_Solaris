@@ -43,6 +43,9 @@ typedef struct {
     float scroll_y;             /**< Scroll offset for the properties panel. */
 } EditorState;
 
+/** @brief Width of the editor side panel in pixels. */
+#define PANEL_W 340
+
 #define TEXTURE_COUNT 12
 extern const char* TEXTURE_FILES[TEXTURE_COUNT];
 

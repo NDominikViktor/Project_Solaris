@@ -11,9 +11,13 @@ set(SOURCES
         src/camera.c
         src/scene.c
         src/ui.c
+        src/hud.c
+        src/comet.c
         include/camera.h
         include/scene.h
         include/ui.h
+        include/hud.h
+        include/comet.h
         include/stb_image.h
 )
 

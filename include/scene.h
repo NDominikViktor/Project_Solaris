@@ -91,6 +91,20 @@ typedef struct {
 void load_planets(World* world, const char* filename);
 
 /**
+ * @brief Draw a textured cube (skybox) around the camera.
+ * @param texture_id OpenGL texture ID.
+ */
+void draw_skybox(GLuint texture_id);
+
+/**
+ * @brief Draw a glowing atmosphere shell around a planet.
+ * @param size  Radius of the planet.
+ * @param r,g,b Atmosphere color.
+ * @param alpha Transparency.
+ */
+void draw_atmosphere(float size, float r, float g, float b, float alpha);
+
+/**
  * @brief Allocate and initialise ring particles for a planet.
  *
  * @param p Pointer to the Planet that owns the ring.

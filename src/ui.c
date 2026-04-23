@@ -246,7 +246,6 @@ void ui_menu_hover(int x, int y, Button btns[3]) {
 
 // ── Editor panel ─────────────────────────────────────────────────────────────
 
-#define PANEL_W 340.0f
 
 static float editor_list_y(void)       { return 74.0f; }
 static float editor_btn1_y(World* w)   { return editor_list_y() + w->count * 26.0f + 8.0f; }
