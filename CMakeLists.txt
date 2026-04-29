@@ -8,15 +8,17 @@ include_directories(include)
 
 set(SOURCES
         main.c
+        src/app.c
         src/camera.c
         src/scene.c
-        src/ui.c
         src/hud.c
+        src/ui.c
         src/comet.c
+        include/app.h
         include/camera.h
         include/scene.h
-        include/ui.h
         include/hud.h
+        include/ui.h
         include/comet.h
         include/stb_image.h
 )
