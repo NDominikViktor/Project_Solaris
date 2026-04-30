@@ -12,6 +12,17 @@
 #include <string.h>
 #include <stdlib.h>
 
+int lod_segments(float cam_x, float cam_y, float cam_z,
+                 float px, float py, float pz, float size) {
+    float dx = cam_x - px, dy = cam_y - py, dz = cam_z - pz;
+    float dist = sqrtf(dx*dx + dy*dy + dz*dz) - size;
+    if (dist < 5.0f)  return 64;
+    if (dist < 15.0f) return 32;
+    if (dist < 40.0f) return 16;
+    return 8;
+}
+
+
 void setup_projection(int width, int height) {
     if (height == 0) height = 1;
     glViewport(0, 0, width, height);

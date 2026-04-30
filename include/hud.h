@@ -62,6 +62,20 @@ void draw_hud(int target_index, float intensity, World* w,
               float time_scale, int cam_preset, TTF_Font* font);
 
 /**
+ * @brief Return appropriate gluSphere segment count based on camera distance.
+ * @param cam_x  Camera X world position.
+ * @param cam_y  Camera Y world position.
+ * @param cam_z  Camera Z world position.
+ * @param px     Planet centre X.
+ * @param py     Planet centre Y.
+ * @param pz     Planet centre Z.
+ * @param size   Planet sphere radius.
+ * @return Segment count: 64 / 32 / 16 / 8 based on distance.
+ */
+int lod_segments(float cam_x, float cam_y, float cam_z,
+                 float px, float py, float pz, float size);
+
+/**
  * @brief Draw a multi-layer additive glow disc around the sun.
  * @param size Radius of the innermost glow layer.
  * @param r    Red component of the glow colour (0-1).
