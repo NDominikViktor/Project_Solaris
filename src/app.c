@@ -128,12 +128,157 @@ void app_handle_events(App* app) {
         // ── Quit ──────────────────────────────────────────────────────────────
         if (event.type == SDL_QUIT) { *running = false; break; }
 
+        // ── ESC → back to menu (not quit) ─────────────────────────────────────
+        if (event.type == SDL_KEYDOWN &&
+            event.key.keysym.sym == SDLK_ESCAPE &&
+            app->app_state != STATE_MENU) {
+            app->app_state = STATE_MENU;
+            app->show_help = false;
+            continue;
+        }
+
         // ── Window resize ─────────────────────────────────────────────────────
         if (event.type == SDL_WINDOWEVENT &&
             event.window.event == SDL_WINDOWEVENT_RESIZED) {
             *win_w = event.window.data1;
             *win_h = event.window.data2;
             setup_projection(*win_w, *win_h);
+        }
+
+        // ── Menu events ───────────────────────────────────────────────────────
+        if (app->app_state == STATE_MENU) {
+            if (event.type == SDL_MOUSEMOTION)
+                ui_menu_hover(event.motion.x, event.motion.y, app->menu_btns);
+            if (event.type == SDL_MOUSEBUTTONDOWN &&
+                event.button.button == SDL_BUTTON_LEFT)
+                ui_menu_click(event.button.x, event.button.y,
+                              app->menu_btns, &app->app_state, running);
+            continue;
+        }
+
+        // ── Editor text input ─────────────────────────────────────────────────
+        if (app->app_state == STATE_EDITOR) {
+            if (event.type == SDL_TEXTINPUT) {
+                if (app->editor.editing_name && app->editor.selected >= 0) {
+                    char* nm = app->world.planets[app->editor.selected].name;
+                    if (strlen(nm) < 30) strncat(nm, event.text.text, 30 - strlen(nm));
+                } else if (app->editor.editing_custom_tex) {
+                    strncat(app->editor.custom_tex_buf, event.text.text,
+                            sizeof(app->editor.custom_tex_buf)
+                            - strlen(app->editor.custom_tex_buf) - 1);
+                }
+            }
+            if (event.type == SDL_KEYDOWN) {
+                SDL_Keycode k = event.key.keysym.sym;
+                if (app->editor.editing_name && app->editor.selected >= 0) {
+                    if (k == SDLK_RETURN || k == SDLK_KP_ENTER)
+                        { app->editor.editing_name = false; SDL_StopTextInput(); }
+                    else if (k == SDLK_BACKSPACE) {
+                        char* nm = app->world.planets[app->editor.selected].name;
+                        int len = (int)strlen(nm); if (len > 0) nm[len-1] = '\0';
+                    }
+                } else if (app->editor.editing_custom_tex) {
+                    if (k == SDLK_RETURN || k == SDLK_KP_ENTER)
+                        { app->editor.editing_custom_tex = false; SDL_StopTextInput(); }
+                    else if (k == SDLK_BACKSPACE) {
+                        int len = (int)strlen(app->editor.custom_tex_buf);
+                        if (len > 0) app->editor.custom_tex_buf[len-1] = '\0';
+                    }
+                }
+            }
+        }
+
+        // ── Keyboard shortcuts (simulation + editor) ──────────────────────────
+        if (event.type == SDL_KEYDOWN &&
+            !app->editor.editing_name && !app->editor.editing_custom_tex) {
+            SDL_Keycode k = event.key.keysym.sym;
+
+            // Planet jump
+            if (k >= SDLK_1 && k <= SDLK_9)
+                { int idx = k - SDLK_1; *target_planet_index = (idx < world->count) ? idx : -1; }
+            if (k == SDLK_0) *target_planet_index = -1;
+
+            // Time scale
+            if (k == SDLK_p) *time_scale = (*time_scale > 0.0f) ? 0.0f : 1.0f;
+            if (k == SDLK_LEFTBRACKET)  { *time_scale -= 0.25f; if (*time_scale < 0) *time_scale = 0; }
+            if (k == SDLK_RIGHTBRACKET) { *time_scale += 0.25f; if (*time_scale > 10) *time_scale = 10; }
+
+            // Sun intensity
+            if (k == SDLK_PLUS  || k == SDLK_KP_PLUS)  { *sun_intensity += 0.1f; if (*sun_intensity > 2.0f) *sun_intensity = 2.0f; }
+            if (k == SDLK_MINUS || k == SDLK_KP_MINUS)  { *sun_intensity -= 0.1f; if (*sun_intensity < 0.1f) *sun_intensity = 0.1f; }
+
+            // Fog
+            if (k == SDLK_f) {
+                *fog_enabled = !(*fog_enabled);
+                if (*fog_enabled) glEnable(GL_FOG); else glDisable(GL_FOG);
+            }
+
+            // Orbits
+            if (k == SDLK_o) *show_orbits = !(*show_orbits);
+
+            // Help
+            if (k == SDLK_F1 || k == SDLK_h) *show_help = !(*show_help);
+
+            // Camera presets
+            if (k == SDLK_t) { *cam_preset=1; camera_ptr->x=0; camera_ptr->y=80.0f; camera_ptr->z=0;    camera_ptr->pitch=-89.0f; camera_ptr->yaw=0; }
+            if (k == SDLK_y) { *cam_preset=2; camera_ptr->x=0; camera_ptr->y=0;     camera_ptr->z=80.0f; camera_ptr->pitch=0;     camera_ptr->yaw=0; }
+            if (k == SDLK_u) { *cam_preset=0; init_camera(camera_ptr); }
+        }
+
+        // ── Mouse button down ─────────────────────────────────────────────────
+        if (event.type == SDL_MOUSEBUTTONDOWN &&
+            event.button.button == SDL_BUTTON_LEFT) {
+            int mx = event.button.x, my = event.button.y;
+
+            // Back to menu button (top-left: 12..92 x 12..38)
+            if (mx >= 12 && mx <= 92 && my >= 12 && my <= 38) {
+                app->app_state = STATE_MENU;
+                app->show_help = false;
+                continue;
+            }
+
+            // Editor panel clicks
+            if (app->app_state == STATE_EDITOR && mx <= PANEL_W) {
+                ui_editor_click(mx, my, world, &app->editor,
+                                *win_w, *win_h, &app->app_state);
+                continue;
+            }
+
+            // Camera preset buttons (bottom-left HUD)
+            {
+                float ts_y = (float)(*win_h) - 85.0f;
+                float cb_y = ts_y - 30.0f;
+                if (my >= (int)cb_y && my <= (int)(cb_y + 24)) {
+                    if      (mx>=20&&mx<=66 ) { *cam_preset=0; init_camera(camera_ptr); }
+                    else if (mx>=70&&mx<=116 ) { *cam_preset=1; camera_ptr->x=0; camera_ptr->y=80.0f; camera_ptr->z=0;    camera_ptr->pitch=-89.0f; camera_ptr->yaw=0; }
+                    else if (mx>=120&&mx<=166) { *cam_preset=2; camera_ptr->x=0; camera_ptr->y=0;     camera_ptr->z=80.0f; camera_ptr->pitch=0;     camera_ptr->yaw=0; }
+                    else if (mx>=170&&mx<=216) { *time_scale = (*time_scale > 0.0f) ? 0.0f : 1.0f; }
+                    continue;
+                }
+                // Time scale bar click
+                if (mx>=20&&mx<=220&&my>=(int)ts_y&&my<=(int)(ts_y+16)) {
+                    *time_scale = ((float)(mx-20)/200.0f)*10.0f;
+                    if (*time_scale < 0) *time_scale = 0;
+                    if (*time_scale > 10) *time_scale = 10;
+                    continue;
+                }
+            }
+
+            // Planet picking
+            {
+                int hit = pick_planet(mx, my, camera_ptr, world);
+                if (hit != -1) *target_planet_index = hit;
+            }
+        }
+
+        // ── Right mouse drag — look around ────────────────────────────────────
+        if (event.type == SDL_MOUSEMOTION &&
+            (SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(SDL_BUTTON_RIGHT))) {
+            float sensitivity = 0.1f;
+            camera_ptr->yaw   += event.motion.xrel * sensitivity;
+            camera_ptr->pitch -= event.motion.yrel * sensitivity;
+            if (camera_ptr->pitch >  89.0f) camera_ptr->pitch =  89.0f;
+            if (camera_ptr->pitch < -89.0f) camera_ptr->pitch = -89.0f;
         }
     }
 
