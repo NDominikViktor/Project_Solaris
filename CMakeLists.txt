@@ -1,38 +1,29 @@
-cmake_minimum_required(VERSION 3.20)
-project(Solaris C)
+CC      = gcc
+CFLAGS  = -std=c11 -Wall -Wextra -Iinclude -D_USE_MATH_DEFINES
+TARGET  = Solaris
+SRCS    = main.c src/app.c src/camera.c src/scene.c src/hud.c src/ui.c src/comet.c
 
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_STANDARD_REQUIRED ON)
+# ── Platform detection ────────────────────────────────────────────────────────
+ifeq ($(OS),Windows_NT)
+# Windows / MinGW
+SDK     = ../c_sdk_220203/MinGW
+CFLAGS += -I$(SDK)/include
+LIBS    = -L$(SDK)/lib -lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf -lopengl32 -lglu32
+EXT     = .exe
+else
+# Linux
+CFLAGS += $(shell sdl2-config --cflags)
+LIBS    = $(shell sdl2-config --libs) -lSDL2_image -lSDL2_ttf -lGL -lGLU -lm
+EXT     =
+endif
 
-include_directories(include)
+# ── Build ─────────────────────────────────────────────────────────────────────
+all: $(TARGET)$(EXT)
 
-set(SOURCES
-        main.c
-        src/app.c
-        src/camera.c
-        src/scene.c
-        src/hud.c
-        src/ui.c
-        src/comet.c
-        include/app.h
-        include/camera.h
-        include/scene.h
-        include/hud.h
-        include/ui.h
-        include/comet.h
-        include/stb_image.h
-)
+$(TARGET)$(EXT): $(SRCS)
+$(CC) $(CFLAGS) -o $@ $(SRCS) $(LIBS)
 
-add_executable(Solaris ${SOURCES})
+clean:
+rm -f $(TARGET) $(TARGET).exe
 
-target_link_libraries(Solaris mingw32 SDL2main SDL2 SDL2_image SDL2_ttf opengl32 glu32)
-
-set_target_properties(Solaris PROPERTIES
-        VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-)
-
-add_custom_command(TARGET Solaris POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${CMAKE_SOURCE_DIR}/assets"
-        "$<TARGET_FILE_DIR:Solaris>/assets"
-)
+.PHONY: all clean
